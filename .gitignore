@@ -1,3 +1,4 @@
 /.idea/
 /fulcro-rad-kvstore.jar
 target
+/fulcro-rad-kvstore.iml
