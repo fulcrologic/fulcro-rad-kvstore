@@ -19,7 +19,7 @@
             [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write]
             [taoensso.timbre :as log]))
 
-;;
+;; TODO: Move comments like this to ns docstring or fn docstring. Ppl rarely look at source
 ;; We always return a map containing only one database - the :main one.
 ;; Not like the datomic implementation of the same function, that will return many databases.
 ;; So many databases might be in the config file, enabling us to easily switch one of them to be :main

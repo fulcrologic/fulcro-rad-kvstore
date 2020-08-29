@@ -6,6 +6,9 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [taoensso.carmine :as car]))
 
+;; TODO: We should figure out how to make each of these "drivers" optional so we don't explode ppls deps as we
+;; add new ones.  Perhaps generate multiple jars for clojars from this one project, or use dyn ns resolution?
+
 (defn upsert-new-value [conn [table id :as ident] m]
   (assert (qualified-keyword? table))
   (assert (uuid? id))

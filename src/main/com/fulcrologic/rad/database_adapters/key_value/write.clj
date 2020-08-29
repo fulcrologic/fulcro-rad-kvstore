@@ -11,12 +11,16 @@
             [clojure.walk :as walk]))
 
 (defn ident-of [[table id value]]
+  ;; TODO: I'd must rather see >defn used instead of assertions. Assertions give a pretty bad experience IMO, because
+  ;; sometimes you get the assertion wrong and I'd rather is not crash.  Why is `value` even names here when
+  ;; the function does not use it?
   (assert (slash-id-keyword? table))
   (assert (uuid? id))
   (assert (map? value))
   [table id])
 
 (defn value-of [[table id value]]
+  ;; TODO: See above
   (assert (slash-id-keyword? table))
   (assert (uuid? id))
   (assert (map? value))

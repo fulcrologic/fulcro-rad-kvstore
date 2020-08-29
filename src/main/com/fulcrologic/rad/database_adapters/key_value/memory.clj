@@ -5,6 +5,7 @@
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
+;; TODO: Public functions should have docstrings
 (defn feed-pair [env st pair]
   (let [[ident m] (if (map? pair)
                     (do
