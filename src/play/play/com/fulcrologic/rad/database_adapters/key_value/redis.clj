@@ -1,6 +1,6 @@
 (ns play.com.fulcrologic.rad.database-adapters.key-value.redis
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.redis_2 :as redis-adaptor]
     [taoensso.carmine :as car :refer (wcar)]
     [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
     [general.dev :as dev]

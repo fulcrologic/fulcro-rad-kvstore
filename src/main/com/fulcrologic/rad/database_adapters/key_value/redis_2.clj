@@ -1,4 +1,4 @@
-(ns com.fulcrologic.rad.database-adapters.key-value.redis
+(ns com.fulcrologic.rad.database-adapters.key-value.redis_2
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -8,6 +8,8 @@
     [taoensso.timbre :as log]))
 
 (defn upsert-new-value [conn table-kludge? [table id :as ident] m]
+;; TODO: We should figure out how to make each of these "drivers" optional so we don't explode ppls deps as we
+;; add new ones.  Perhaps generate multiple jars for clojars from this one project, or use dyn ns resolution?
   (assert (qualified-keyword? table))
   (assert (uuid? id))
   (let [last-value (or (car/wcar conn (car/get ident)) {})]
