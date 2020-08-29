@@ -1,13 +1,8 @@
 {:paths   ["src/main"]
  :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
-           com.fulcrologic/fulcro-rad {:mvn/version "0.0.15-alpha" :scope "provided"}
+           com.fulcrologic/fulcro-rad {:mvn/version "1.0.0-RC1" :scope "provided"}
            com.taoensso/carmine       {:mvn/version "2.19.1"}
            com.rpl/specter            {:mvn/version "1.1.3"}}
- :aliases {:depstar {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}}
-           :deploy  {:extra-deps {slipset/deps-deploy {:mvn/version "RELEASE"}}
-                     :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy"
-                                  "fulcro-rad-kvstore.jar"]}
-           :play    {:extra-paths ["dev" "src/play"]
-                     :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.0.0"}
-                                   cjmurphy/dev-lib            {:mvn/version "0.1.0"}}}
-           }}
+ :aliases {:dev {:extra-paths ["src/dev" "src/play"]
+                 :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.0.0"}
+                               cjmurphy/dev-lib            {:mvn/version "0.1.0"}}}}}
