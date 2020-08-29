@@ -6,4 +6,8 @@
  :aliases {:depstar {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}}
            :deploy  {:extra-deps {slipset/deps-deploy {:mvn/version "RELEASE"}}
                      :main-opts  ["-m" "deps-deploy.deps-deploy" "deploy"
-                                  "fulcro-rad-kvstore.jar"]}}}
+                                  "fulcro-rad-kvstore.jar"]}
+           :play    {:extra-paths ["dev" "src/play"]
+                     :extra-deps  {org.clojure/tools.namespace {:mvn/version "1.0.0"}
+                                   cjmurphy/dev-lib            {:mvn/version "0.1.0"}}}
+           }}

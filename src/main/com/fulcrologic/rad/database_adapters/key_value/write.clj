@@ -3,12 +3,24 @@
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
-            [com.fulcrologic.rad.database-adapters.key-value.adaptor :as adaptor]
+            [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-            [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
+            [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read :refer [slash-id-keyword?]]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]))
+
+(defn ident-of [[table id value]]
+  (assert (slash-id-keyword? table))
+  (assert (uuid? id))
+  (assert (map? value))
+  [table id])
+
+(defn value-of [[table id value]]
+  (assert (slash-id-keyword? table))
+  (assert (uuid? id))
+  (assert (map? value))
+  value)
 
 (defn to-one-join? [x]
   (when (map-entry? x)
@@ -105,20 +117,20 @@
 (>defn write-tree
   [ks env ident m]
   [any? map? eql/ident? map? => any?]
-  (assert (satisfies? adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
+  (assert (satisfies? kv-adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
   (assert (eql/ident? ident) ["Every key must be an ident" ident (type ident)])
   (assert (map? m) ["Everything stored at a key must be a map" m (type m)])
   (let [entries (flatten m)]
-    (adaptor/write* ks env entries)))
+    (kv-adaptor/write* ks env entries)))
 
 (>defn remove-table-rows
   [ks env table]
   [any? map? keyword? => any?]
-  (assert (satisfies? adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
-  (let [idents (->> (adaptor/read* ks env table)
+  (assert (satisfies? kv-adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
+  (let [idents (->> (kv-adaptor/read* ks env table)
                     (map (fn [m] [table (get m table)])))]
     (doseq [ident idents]
-      (adaptor/remove* ks env ident))))
+      (kv-adaptor/remove1 ks env ident))))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))
 
@@ -145,21 +157,21 @@
   [ks {::attr/keys [key->attribute] :as env} delta]
   [any? map? map? => map?]
   (assert key->attribute ["Don't have key->attribute in env" (keys env)])
-  (adaptor/write* ks (assoc env :debug? true)
-                  (->> delta
-                         (walk/postwalk
-                           (fn [x] (if (tempid/tempid? x)
-                                     (:id x)
-                                     x)))
-                         (map (fn [[[table id] m]]
-                                (assert (-> id string? not) ["String id means need to support string tempids. (Only Fulcro tempids supported)" id])
-                                [[table id] (-> m
-                                                (#(->> %
-                                                       (map (fn [[attrib attrib-v]]
-                                                              [attrib (-> attrib-v
-                                                                          after-only)]))
-                                                       (into {})))
-                                                (assoc table id))]))
-                         (into {})))
+  (kv-adaptor/write* ks (assoc env :debug? true)
+                     (->> delta
+                          (walk/postwalk
+                            (fn [x] (if (tempid/tempid? x)
+                                      (:id x)
+                                      x)))
+                          (map (fn [[[table id] m]]
+                                 (assert (-> id string? not) ["String id means need to support string tempids. (Only Fulcro tempids supported)" id])
+                                 [[table id] (-> m
+                                                 (#(->> %
+                                                        (map (fn [[attrib attrib-v]]
+                                                               [attrib (-> attrib-v
+                                                                           after-only)]))
+                                                        (into {})))
+                                                 (assoc table id))]))
+                          (into {})))
   ;; :tempids handled by caller
   {})

@@ -1,5 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.pathom
-  (:require [com.fulcrologic.rad.database-adapters.key-value.adaptor :as adaptor]
+  (:require [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
@@ -134,7 +134,7 @@
                connection (-> env ::key-value/connections (get schema))]
               (do
                 (log/warn "Deleting (not yet tested)" ident)
-                (adaptor/remove* connection env ident)
+                (kv-adaptor/remove1 connection env ident)
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
 
@@ -171,7 +171,7 @@
 (defn get-by-ids
   [db env idents]
   (mapv (fn [ident]
-          (key-value-read/read-outer db env false ident))
+          (key-value-read/read-compact db env ident))
         idents))
 
 (defn entity-query
@@ -182,15 +182,15 @@
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))]
     (let [db (some-> (get-in env [::key-value/databases schema]) deref)
-          _ (assert (satisfies? adaptor/KeyStore db) ["db is not a KeyStore" schema db (keys (get env ::key-value/databases))])
+          _ (assert (satisfies? kv-adaptor/KeyStore db) ["db is not a KeyStore" schema db (keys (get env ::key-value/databases))])
           ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
           idents (mapv (fn [id]
                          [qualified-key (key-value-read/unwrap-id env qualified-key id)])
                        ids)]
-      (when (-> (adaptor/db-f db env) count zero?)
-        (log/warn "Empty key value store" (adaptor/instance-name-f db env)))
+      (when (-> (kv-adaptor/db-f db env) count zero?)
+        (log/warn "Empty key value store" (kv-adaptor/instance-name-f db env)))
       (let [result (get-by-ids db env idents)]
         (if one?
           (first result)

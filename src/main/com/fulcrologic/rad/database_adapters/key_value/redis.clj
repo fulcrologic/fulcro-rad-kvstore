@@ -1,10 +1,9 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.redis
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.example.model.seed :refer [ident-of value-of]]
     [taoensso.carmine :as car]))
 
 (defn upsert-new-value [conn [table id :as ident] m]
@@ -49,11 +48,11 @@
 ;; See read-tree
 ;; However we still preference EQL/Pathom by always returning a map
 ;;
-(deftype RedisKeyStore [conn] adaptor/KeyStore
+(deftype RedisKeyStore [conn] kv-adaptor/KeyStore
   (db-f [this env] conn)
   (instance-name-f [this env] (-> conn :spec :uri))
   (read* [this env ident-or-idents-or-table]
-    (let [cardinality (adaptor/cardinality ident-or-idents-or-table)
+    (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)
           res (case cardinality
                 :ident (car/wcar conn (car/get ident-or-idents-or-table))
                 :keyword (->> (car/wcar conn (car/get ident-or-idents-or-table))
@@ -64,5 +63,5 @@
     (inner-write conn pairs-of-ident-map))
   (write1 [this env ident m]
     (inner-write conn [[ident m]]))
-  (remove* [this env ident]
+  (remove1 [this env ident]
     (remove-row conn ident)))

@@ -1,10 +1,9 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.memory
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-    [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.example.model.seed :refer [ident-of value-of]]))
+    [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
 (defn feed-pair [env st pair]
   (let [[ident m] (if (map? pair)
@@ -32,25 +31,25 @@
 ;; However we still preference EQL/Pathom by always returning a map
 ;;
 (defn batch-of-rows [this env table]
-  (->> (adaptor/db-f this env)
+  (->> (kv-adaptor/db-f this env)
        keys
        (filter #(= table (first %)))
        (mapv (fn [[table id]] {table id}))))
 
-(deftype MemoryKeyStore [keystore-name a] adaptor/KeyStore
+(deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
   (db-f [this env] (deref a))
   (instance-name-f [this env] keystore-name)
   (read* [this env ident-or-idents-or-table]
-    (let [cardinality (adaptor/cardinality ident-or-idents-or-table)]
+    (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
       (case cardinality
-        :ident (get (adaptor/db-f this env) ident-or-idents-or-table)
+        :ident (get (kv-adaptor/db-f this env) ident-or-idents-or-table)
         :keyword (batch-of-rows this env ident-or-idents-or-table)
         :idents (mapv (fn [ident]
-                        (get (adaptor/db-f this env) ident))
+                        (get (kv-adaptor/db-f this env) ident))
                       ident-or-idents-or-table))))
   (write* [this env pairs-of-ident-map]
     (inner-write a env pairs-of-ident-map))
   (write1 [this env ident m]
     (inner-write a env [[ident m]]))
-  (remove* [this env ident]
+  (remove1 [this env ident]
     (swap! a update dissoc ident)))

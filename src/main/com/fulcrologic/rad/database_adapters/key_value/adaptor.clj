@@ -13,4 +13,4 @@
   (read* [this env ident-or-idents-or-table])
   (write* [this env pairs-of-ident-map])
   (write1 [this env ident m])
-  (remove* [this env ident]))
+  (remove1 [this env ident]))
