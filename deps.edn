@@ -9,7 +9,7 @@
                                com.fulcrologic/fulcro                 {:mvn/version "3.2.12"}
                                com.fulcrologic/fulcro-rad-semantic-ui {:mvn/version "0.0.12-alpha"}
                                com.fulcrologic/fulcro-i18n            {:mvn/version "0.0.4-alpha"}
-                               com.wsscode/pathom                     {:mvn/version "2.2.28"}
+                               com.wsscode/pathom                     {:mvn/version "2.3.0-alpha10"}
                                edn-query-language/eql                 {:mvn/version "0.0.9"}
                                com.taoensso/encore                    {:mvn/version "2.120.0"}
                                com.fulcrologic/guardrails             {:mvn/version "0.0.12"}
