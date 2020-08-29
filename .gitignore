@@ -3,3 +3,7 @@
 target
 /fulcro-rad-kvstore.iml
 node_modules
+.shadow-cljs
+.cpcache
+resources/public/js
+.nrepl-port
