@@ -24,15 +24,16 @@
 ;; Not like the datomic implementation of the same function, that will return many databases.
 ;; So many databases might be in the config file, enabling us to easily switch one of them to be :main
 ;;
-(defn start-database [_ {::key-value/keys [databases] :as config}]
+(defn start-database [_ {::key-value/keys [databases config]}]
   (let [{:key-value/keys [kind] :as main-database} (:main databases)]
     (assert main-database ["Have one database, but it isn't called :main" databases])
     (assert kind ["kind not found in key-value-keys\n" main-database])
     {:main (case kind
              :clojure-atom (memory-adaptor/->MemoryKeyStore "start-databases" (atom {}))
              :redis (let [{:redis/keys [uri]} main-database
-                          conn {:pool {} :spec {:uri uri}}]
-                      (redis-adaptor/->RedisKeyStore conn)))}))
+                          conn {:pool {} :spec {:uri uri}}
+                          {:key-value/keys [table-kludge?]} config]
+                      (redis-adaptor/->RedisKeyStore conn table-kludge?)))}))
 
 (defn pathom-plugin
   "A pathom plugin that adds the necessary KeyStore connections/databases (same thing) to the pathom env for

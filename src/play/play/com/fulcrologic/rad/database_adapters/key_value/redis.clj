@@ -46,7 +46,7 @@
 (def m {:some-table/id       5
         :some-table/greeting "Hallo Sailor"})
 
-(def adaptor (redis-adaptor/->RedisKeyStore server1-conn))
+(def adaptor (redis-adaptor/->RedisKeyStore server1-conn true))
 
 ;;
 ;; Doesn't work so simplify
@@ -91,6 +91,7 @@
 
 (defn append-another []
   (car/wcar server1-conn (redis-adaptor/upsert-new-value
+                           true
                            server1-conn
                            [:account/id (new-uuid 101)]
                            {:account/id (new-uuid 101)})))
