@@ -41,6 +41,7 @@
    [map? boolean? (? keyword?) => map?]
    (let [id-attribute (or id-attribute (id-attribute-f m))]
      (when slash-id-required?
+       ;; TODO
        ;; We want to be alterable by config but have not yet done. See defaults.edn
        ;; This slash-id-required? always true, and we can get rid of when use RAD meta data to find equiv of /id
        (assert id-attribute

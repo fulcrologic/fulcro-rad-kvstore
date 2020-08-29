@@ -14,7 +14,7 @@
 (defn print-stack-trace [one two]
   (st/print-cause-trace one two))
 
-(set-refresh-dirs "dev" "src/main" "src/play")
+(set-refresh-dirs "src/dev" "src/main" "src/play" "src/demo-project")
 
 (defn refresh [& args]
   (tools-ns/refresh))

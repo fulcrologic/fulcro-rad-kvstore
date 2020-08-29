@@ -8,22 +8,15 @@
             [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read :refer [slash-id-keyword?]]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [clojure.spec.alpha :as s]))
 
-(defn ident-of [[table id value]]
-  ;; TODO: I'd must rather see >defn used instead of assertions. Assertions give a pretty bad experience IMO, because
-  ;; sometimes you get the assertion wrong and I'd rather is not crash.  Why is `value` even names here when
-  ;; the function does not use it?
-  (assert (slash-id-keyword? table))
-  (assert (uuid? id))
-  (assert (map? value))
+(>defn ident-of [[table id _]]
+  [(s/tuple slash-id-keyword? uuid? any?) => eql/ident?]
   [table id])
 
-(defn value-of [[table id value]]
-  ;; TODO: See above
-  (assert (slash-id-keyword? table))
-  (assert (uuid? id))
-  (assert (map? value))
+(>defn value-of [[table id value]]
+  [(s/tuple slash-id-keyword? uuid? map?) => map?]
   value)
 
 (defn to-one-join? [x]
@@ -91,7 +84,6 @@
 ;;
 (defn first-parse-flatten [x]
   (cond
-    ;; This s/keep the maps
     (parent-join? x) (let [[k v] x]
                        [v])
     (to-one-join? x) (let [[k v] x]

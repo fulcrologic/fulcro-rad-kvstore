@@ -1,6 +1,7 @@
 (ns com.example.components.parser
   (:require
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
+    [com.example.components.seeded-connection :refer [kv-connection]]
     [com.example.components.config :refer [config]]
     [com.example.components.delete-middleware :as delete]
     [com.example.components.save-middleware :as save]
@@ -15,15 +16,15 @@
     [com.example.model.sales :as sales]
     [com.example.model.item :as item]
     [com.wsscode.pathom.core :as p]
-    [com.fulcrologic.rad.type-support.date-time :as dt]))
+    [com.fulcrologic.rad.type-support.date-time :as dt]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as key-value-pathom]))
 
 (defstate parser
   :start
   (pathom/new-parser config
     [(attr/pathom-plugin all-attributes)
      (form/pathom-plugin save/middleware delete/middleware)
-     ;; TODO: kvstore pathom plugin setup
-     ;(datomic/pathom-plugin (fn [env] {:production (:main datomic-connections)}))
+     (key-value-pathom/pathom-plugin (fn [env] {:production (:main kv-connection)}))
      {::p/wrap-parser
       (fn transform-parser-out-plugin-external [parser]
         (fn transform-parser-out-plugin-internal [env tx]

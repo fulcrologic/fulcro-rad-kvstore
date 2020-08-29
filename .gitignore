@@ -7,3 +7,4 @@ node_modules
 .cpcache
 resources/public/js
 .nrepl-port
+/package-lock.json

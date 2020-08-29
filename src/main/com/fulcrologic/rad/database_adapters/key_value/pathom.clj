@@ -29,7 +29,7 @@
     (assert main-database ["Have one database, but it isn't called :main" databases])
     (assert kind ["kind not found in key-value-keys\n" main-database])
     {:main (case kind
-             :clojure-atom (memory-adaptor/->MemoryKeyStore "start-databases" (atom {}))
+             :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}))
              :redis (let [{:redis/keys [uri]} main-database
                           conn {:pool {} :spec {:uri uri}}
                           {:key-value/keys [table-kludge?]} config]

@@ -36,8 +36,9 @@
 
 (defn write-and-read-1 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-1" (atom {}))]
-    (key-value-write/write-tree ks pathom-env [:some-table 1] {:some-table/greeting "Hi"})
-    (dev/log-on "reading the row" (key-value-read/read-tree ks pathom-env [:some-table 1]))))
+    (key-value-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id 1
+                                                                  :some-table/greeting "Hi"})
+    (dev/log-on "reading the row" (key-value-read/read-tree ks pathom-env [:some-table/id 1]))))
 
 (defn greg []
   {:person/id   1

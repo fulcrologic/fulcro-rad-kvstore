@@ -3,12 +3,11 @@
     [com.example.model :refer [all-attributes]]
     [mount.core :refer [defstate]]
     [com.fulcrologic.rad.resolvers :as res]
-    [taoensso.timbre :as log]))
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as key-value-pathom]))
 
 (defstate automatic-resolvers
   :start
   (vec
     (concat
       (res/generate-resolvers all-attributes)
-      ;; TODO: Generate resolvers for kv store
-      )))
+      (key-value-pathom/generate-resolvers all-attributes :production))))
