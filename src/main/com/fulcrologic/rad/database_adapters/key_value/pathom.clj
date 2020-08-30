@@ -1,7 +1,7 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.pathom
   (:require [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
-            [com.fulcrologic.rad.database-adapters.key-value.redis_2 :as redis-adaptor]
+            [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
@@ -24,10 +24,13 @@
 ;; Not like the datomic implementation of the same function, that will return many databases.
 ;; So many databases might be in the config file, enabling us to easily switch one of them to be :main
 ;;
-(defn start-database [_ {::key-value/keys [databases config]}]
+(>defn start-database [_ {::key-value/keys [databases config]}]
+  [any? map? => map?]
   (let [{:key-value/keys [kind] :as main-database} (:main databases)]
-    (assert main-database ["Have one database, but it isn't called :main" databases])
-    (assert kind ["kind not found in key-value-keys\n" main-database])
+    (when (nil? main-database)
+      (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
+    (when (nil? kind)
+      (throw (ex-info "kind not found in :main database\n" {:database main-database})))
     {:main (case kind
              :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}))
              :redis (let [{:redis/keys [uri]} main-database
@@ -183,7 +186,9 @@
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))]
     (let [db (some-> (get-in env [::key-value/databases schema]) deref)
-          _ (assert (satisfies? kv-adaptor/KeyStore db) ["db is not a KeyStore" schema db (keys (get env ::key-value/databases))])
+          _ (when-not (satisfies? kv-adaptor/KeyStore db)
+              (throw (ex-info "db is not a KeyStore" {:schema schema :db db
+                                                      :databases (keys (get env ::key-value/databases))})))
           ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
@@ -197,10 +202,10 @@
           (first result)
           result)))))
 
-(defn- fix-id-keys
+(>defn fix-id-keys
   "Fix the ID keys recursively on result."
   [k->a ast-nodes result]
-  (assert (map? result) ["Expect fix-id-keys to be called on a map" (type result) result])
+  [map? vector? map? => map?]
   (let [id? (fn [{:keys [dispatch-key]}] (some-> dispatch-key k->a ::attr/identity?))
         id-key (:key (sp/select-first [sp/ALL id?] ast-nodes))
         join-key->children (into {}

@@ -6,11 +6,10 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
 ;; TODO: Public functions should have docstrings
-(defn feed-pair [env st pair]
+(>defn feed-pair [env st pair]
+  [map? map? any? => map?]
   (let [[ident m] (if (map? pair)
-                    (do
-                      (assert (= 1 (count pair)) ["Expected only one map-entry" pair])
-                      (first pair))
+                    (first pair)
                     pair)]
     (update st ident merge m)))
 
@@ -38,9 +37,9 @@
        (mapv (fn [[table id]] {table id}))))
 
 (deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
-  (db-f [this env] (deref a))
-  (instance-name-f [this env] keystore-name)
-  (read* [this env ident-or-idents-or-table]
+  (-db-f [this env] (deref a))
+  (-instance-name-f [this env] keystore-name)
+  (-read* [this env ident-or-idents-or-table]
     (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
       (case cardinality
         :ident (get (kv-adaptor/db-f this env) ident-or-idents-or-table)
@@ -48,9 +47,9 @@
         :idents (mapv (fn [ident]
                         (get (kv-adaptor/db-f this env) ident))
                       ident-or-idents-or-table))))
-  (write* [this env pairs-of-ident-map]
+  (-write* [this env pairs-of-ident-map]
     (inner-write a env pairs-of-ident-map))
-  (write1 [this env ident m]
+  (-write1 [this env ident m]
     (inner-write a env [[ident m]]))
-  (remove1 [this env ident]
+  (-remove1 [this env ident]
     (swap! a update dissoc ident)))

@@ -1,6 +1,6 @@
 (ns play.com.fulcrologic.rad.database-adapters.key-value.redis
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.redis_2 :as redis-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
     [taoensso.carmine :as car :refer (wcar)]
     [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
     [general.dev :as dev]
@@ -89,8 +89,8 @@
 (defn get-account []
   (dev/log-on (car/wcar server1-conn (car/get :account/id))))
 
-(defn append-another []
-  (car/wcar server1-conn (redis-adaptor/upsert-new-value
+(defn append-another! []
+  (car/wcar server1-conn (redis-adaptor/upsert-new-value!
                            true
                            server1-conn
                            [:account/id (new-uuid 101)]

@@ -60,12 +60,12 @@
      (seed/new-invoice date-5 (ident-of barb)
                        [(value-of (seed/new-line-item (ident-of building-blocks) 10 20.0M))])]))
 
-(defn seed! [connection]
+(>defn seed! [connection]
+  [::kv-adaptor/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
-  (assert (satisfies? kv-adaptor/KeyStore connection) ["connection is not a KeyStore" connection])
   (log/info "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection {}))
   (doseq [table (all-tables!)]
-    (key-value-write/remove-table-rows connection {} table))
+    (key-value-write/remove-table-rows! connection {} table))
   (doseq [[table id value] (all-entities!)]
     (key-value-write/write-tree connection {} [table id] value)))
 

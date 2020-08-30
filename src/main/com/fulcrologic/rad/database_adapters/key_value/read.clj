@@ -37,24 +37,17 @@
        (-> x first slash-id-keyword?)))
 
 (>defn map->eql-result
-  ([m slash-id-required? id-attribute]
-   [map? boolean? (? keyword?) => map?]
+  ([m id-attribute]
+   [map? (? keyword?) => map?]
    (let [id-attribute (or id-attribute (id-attribute-f m))]
-     (when slash-id-required?
-       ;; TODO
-       ;; We want to be alterable by config but have not yet done. See defaults.edn
-       ;; This slash-id-required? always true, and we can get rid of when use RAD meta data to find equiv of /id
-       (assert id-attribute
-               ["Every value stored in the DB must have an /id attribute (current implementation limitation)"
-                (keys m)]))
-     (when id-attribute
-       {id-attribute (get m id-attribute)})))
-  ([m slash-id-required?]
-   [map? boolean? => map?]
-   (map->eql-result m slash-id-required? nil))
+     (when (nil? id-attribute)
+       ;; We want to be /id by RAD config but have not yet done.
+       (throw (ex-info "Every value stored in the DB must have an /id attribute (current implementation limitation)"
+                       {:keys (keys m)})))
+     {id-attribute (get m id-attribute)}))
   ([m]
    [map? => map?]
-   (map->eql-result m true nil)))
+   (map->eql-result m nil)))
 
 (defn map->ident [m]
   (let [[k v] (first (map->eql-result m))]
@@ -64,47 +57,40 @@
 ;; reference is an ident or a vector of idents, or a scalar (in which case not a reference)
 ;; just-id-map? means to return a map will only the id in it, so suitable for Pathom
 ;;
-(defn idents->value [ks env just-id-map? reference]
-  (assert (some? reference) ["nil reference/value s/never be kept in db" (kv-adaptor/instance-name-f ks env)])
+(>defn idents->value [ks env just-id-map? reference]
+  [::kv-adaptor/key-store map? boolean? any? => any?]
   (let [recurse-f (partial idents->value ks env just-id-map?)]
     (cond
-      (eql/ident? reference) (let [[table id] reference
-                                   res (if just-id-map?
-                                         {table id}
-                                         (kv-adaptor/read* ks env reference))]
-                               (assert (seq res) ["Not found a result" reference])
-                               res)
+      (eql/ident? reference) (let [[table id] reference]
+                               (if just-id-map?
+                                 {table id}
+                                 (kv-adaptor/read* ks env reference)))
       (vector? reference) (mapv recurse-f reference)
       :else reference)))
 
 ;;
 ;; denormalize-children? means we return as much of the tree as possible
 ;;
-(>defn -read-outer
+(defn -read-outer
   [ks env denormalize-children? ident-or-m]
-  [any? map? boolean? any? => map?]
-  (assert (satisfies? kv-adaptor/KeyStore ks) ["Not a KeyStore" ks (keys (get env ::key-value/databases))])
   (let [ident (if (map? ident-or-m)
-                (let [ident (into [] (first ident-or-m))]
-                  (assert (= 1 (count ident-or-m))
-                          ["Expecting to read an ident-like thing (a map with only one map-entry)" ident-or-m])
-                  ident)
-                (do
-                  (assert (eql/ident? ident-or-m) ["Not an ident" ident-or-m])
-                  ident-or-m))
+                (into [] (first ident-or-m))
+                ident-or-m)
         entity (kv-adaptor/read* ks env ident)]
-    (assert entity ["Could not find entity from ident" ident (kv-adaptor/instance-name-f ks env)])
-    (into {}
-          (map (fn [[k v]]
-                 (if (nil? v)
-                   (do
-                     (log/warn "nil value in database for attribute" k)
-                     [k v])
-                   [k (idents->value ks env (not denormalize-children?) v)])))
-          entity)))
+    (when entity
+      (into {}
+            (map (fn [[k v]]
+                   (if (nil? v)
+                     (do
+                       (log/warn "nil value in database for attribute" k)
+                       [k v])
+                     [k (idents->value ks env (not denormalize-children?) v)])))
+            entity))))
 
-(defn read-tree [ks env ident-or-m]
+(>defn read-tree [ks env ident-or-m]
+  [::kv-adaptor/key-store map? ::kv-adaptor/ident-or-map => (? map?)]
   (-read-outer ks env true ident-or-m))
 
-(defn read-compact [ks env ident-or-m]
+(>defn read-compact [ks env ident-or-m]
+  [::kv-adaptor/key-store map? ::kv-adaptor/ident-or-map => (? map?)]
   (-read-outer ks env false ident-or-m))

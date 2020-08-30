@@ -1,18 +1,30 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.write
   (:refer-clojure :exclude [flatten])
   (:require [edn-query-language.core :as eql]
-            [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read :refer [slash-id-keyword?]]
-            [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
             [clojure.spec.alpha :as s]))
 
-(>defn ident-of [[table id _]]
-  [(s/tuple slash-id-keyword? uuid? any?) => eql/ident?]
+;; T
+;; Assertions give a pretty bad experience IMO, because sometimes you get the assertion wrong and I'd rather is not
+;; crash.
+;; Why is `value` even names here when the function does not use it?
+;;
+;; C
+;; Assertions are development only. So it doesn't matter so much if you make a mistake. An 'always on' assert would be
+;; a `throw`. I've now corrected my error and changed a few assertions to throws.
+;;
+;; `value` doesn't need to be there. The signatures of these two functions just need to be the same because of how
+;; they are used. In a way I do care that the types are correct, even though they are selectively ignored. They are
+;; being used to compose the seeded data.
+;;
+
+(>defn ident-of [[table id value]]
+  [(s/tuple slash-id-keyword? uuid? map?) => eql/ident?]
   [table id])
 
 (>defn value-of [[table id value]]
@@ -112,17 +124,13 @@
 ;;
 (>defn write-tree
   [ks env ident m]
-  [any? map? eql/ident? map? => any?]
-  (assert (satisfies? kv-adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
-  (assert (eql/ident? ident) ["Every key must be an ident" ident (type ident)])
-  (assert (map? m) ["Everything stored at a key must be a map" m (type m)])
+  [::kv-adaptor/key-store map? eql/ident? map? => any?]
   (let [entries (flatten m)]
     (kv-adaptor/write* ks env entries)))
 
-(>defn remove-table-rows
+(>defn remove-table-rows!
   [ks env table]
-  [any? map? keyword? => any?]
-  (assert (satisfies? kv-adaptor/KeyStore ks) ["ks is not a KeyStore" ks (keys (get env ::key-value/databases))])
+  [::kv-adaptor/key-store map? keyword? => any?]
   (let [idents (->> (kv-adaptor/read* ks env table)
                     (map (fn [m] [table (get m table)])))]
     (doseq [ident idents]
@@ -150,9 +158,8 @@
 ;; For writing to our db we can just unwrap tempids, seen here in postwalk
 ;;
 (>defn write-delta
-  [ks {::attr/keys [key->attribute] :as env} delta]
-  [any? map? map? => map?]
-  (assert key->attribute ["Don't have key->attribute in env" (keys env)])
+  [ks env delta]
+  [::kv-adaptor/key-store map? map? => map?]
   (kv-adaptor/write* ks (assoc env :debug? true)
                      (->> delta
                           (walk/postwalk
@@ -160,7 +167,8 @@
                                       (:id x)
                                       x)))
                           (map (fn [[[table id] m]]
-                                 (assert (-> id string? not) ["String id means need to support string tempids. (Only Fulcro tempids supported)" id])
+                                 (when (string? id)
+                                   (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
                                  [[table id] (-> m
                                                  (#(->> %
                                                         (map (fn [[attrib attrib-v]]

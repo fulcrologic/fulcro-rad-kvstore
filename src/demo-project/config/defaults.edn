@@ -40,7 +40,7 @@
                                                           :log-requests?  true
                                                           :log-responses? true}
 
- :taoensso.timbre/logging-config                         {:level        :debug
+ :taoensso.timbre/logging-config                         {:level        :warn
                                                           :ns-whitelist []
                                                           :ns-blacklist ["com.mchange.v2.c3p0.impl.C3P0PooledConnectionPool"
                                                                          "com.mchange.v2.c3p0.stmt.GooGooStatementCache"
