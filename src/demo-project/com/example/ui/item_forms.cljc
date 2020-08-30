@@ -17,6 +17,8 @@
 
 (form/defsc-form ItemForm [this props]
   {fo/id            item/id
+   ::form/confirm    (fn [message]
+                       #?(:cljs (js/confirm message)))
    fo/attributes    [item/item-name
                      item/category
                      item/description

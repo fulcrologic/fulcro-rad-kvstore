@@ -37,32 +37,34 @@
                    line-items)))
 
 (form/defsc-form InvoiceForm [this props]
-  {fo/id             invoice/id
-   ;; So, a special (attr/derived-value key type style) would be useful for form logic display
-   ;::form/read-only?     true
-   fo/attributes     [invoice/customer invoice/date invoice/line-items invoice/total]
-   fo/default-values {:invoice/date (datetime/now)}
-   fo/validator      invoice-validator
-   fo/layout         [[:invoice/customer :invoice/date]
-                      [:invoice/line-items]
-                      [:invoice/total]]
-   fo/field-styles   {:invoice/customer :pick-one}
-   fo/field-options  {:invoice/customer {::picker-options/query-key       :account/all-accounts
-                                         ::picker-options/query-component AccountQuery
-                                         ::picker-options/options-xform   (fn [_ options] (mapv
-                                                                                            (fn [{:account/keys [id name email]}]
-                                                                                              {:text (str name ", " email) :value [:account/id id]})
-                                                                                            (sort-by :account/name options)))
-                                         ::picker-options/cache-time-ms   30000}}
-   fo/subforms       {:invoice/line-items {fo/ui          LineItemForm
-                                           fo/can-delete? (fn [_ _] true)
-                                           fo/can-add?    (fn [_ _] true)}}
-   fo/triggers       {:derive-fields (fn [new-form-tree] (sum-subtotals* new-form-tree))}
-   fo/route-prefix   "invoice"
-   fo/title          (fn [_ {:invoice/keys [id]}]
-                       (if (tempid/tempid? id)
-                         (str "New Invoice")
-                         (str "Invoice " id)))})
+                 {fo/id             invoice/id
+                  ::form/confirm    (fn [message]
+                                      #?(:cljs (js/confirm message)))
+                  ;; So, a special (attr/derived-value key type style) would be useful for form logic display
+                  ;::form/read-only?     true
+                  fo/attributes     [invoice/customer invoice/date invoice/line-items invoice/total]
+                  fo/default-values {:invoice/date (datetime/now)}
+                  fo/validator      invoice-validator
+                  fo/layout         [[:invoice/customer :invoice/date]
+                                     [:invoice/line-items]
+                                     [:invoice/total]]
+                  fo/field-styles   {:invoice/customer :pick-one}
+                  fo/field-options  {:invoice/customer {::picker-options/query-key       :account/all-accounts
+                                                        ::picker-options/query-component AccountQuery
+                                                        ::picker-options/options-xform   (fn [_ options] (mapv
+                                                                                                           (fn [{:account/keys [id name email]}]
+                                                                                                             {:text (str name ", " email) :value [:account/id id]})
+                                                                                                           (sort-by :account/name options)))
+                                                        ::picker-options/cache-time-ms   30000}}
+                  fo/subforms       {:invoice/line-items {fo/ui          LineItemForm
+                                                          fo/can-delete? (fn [_ _] true)
+                                                          fo/can-add?    (fn [_ _] true)}}
+                  fo/triggers       {:derive-fields (fn [new-form-tree] (sum-subtotals* new-form-tree))}
+                  fo/route-prefix   "invoice"
+                  fo/title          (fn [_ {:invoice/keys [id]}]
+                                      (if (tempid/tempid? id)
+                                        (str "New Invoice")
+                                        (str "Invoice " id)))})
 
 (report/defsc-report AccountInvoices [this props]
   {ro/title                              "Customer Invoices"

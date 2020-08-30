@@ -6,6 +6,8 @@
 
 (form/defsc-form AddressForm [this props]
   {fo/id           address/id
+   ::form/confirm    (fn [message]
+                       #?(:cljs (js/confirm message)))
    fo/attributes   [address/street address/city address/state address/zip]
    fo/cancel-route ["landing-page"]
    fo/route-prefix "address"

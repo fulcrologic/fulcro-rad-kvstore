@@ -9,17 +9,21 @@
             [clojure.walk :as walk]
             [clojure.spec.alpha :as s]))
 
+;;
+;; TODO (This is a 'done' but leaving b/c questions answered, wipe after read!)
 ;; T
 ;; Assertions give a pretty bad experience IMO, because sometimes you get the assertion wrong and I'd rather is not
 ;; crash.
 ;; Why is `value` even names here when the function does not use it?
 ;;
 ;; C
-;; Assertions are development only. So it doesn't matter so much if you make a mistake. An 'always on' assert would be
-;; a `throw`. I've now corrected my error and changed a few assertions to throws.
+;; Assertions are development only. So it shouldn't matter so much if you make a mistake. But I guess you are saying
+;; people forget to make sure of this in production JVMs.
+;;
+;; An 'always on' assert would be a `throw`. I've now changed a few assertions to throws.
 ;;
 ;; `value` doesn't need to be there. The signatures of these two functions just need to be the same because of how
-;; they are used. In a way I do care that the types are correct, even though they are selectively ignored. They are
+;; they are used. I do care that the types are correct, even though they are selectively ignored. They are
 ;; being used to compose the seeded data.
 ;;
 

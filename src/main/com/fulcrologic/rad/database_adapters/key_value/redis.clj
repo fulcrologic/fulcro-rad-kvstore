@@ -8,10 +8,16 @@
     [taoensso.timbre :as log]
     [edn-query-language.core :as eql]))
 
+;;
+;; T
+;; TODO: We should figure out how to make each of these "drivers" optional so we don't explode ppls deps as we
+;; add new ones.  Perhaps generate multiple jars for clojars from this one project, or use dyn ns resolution?
+;; C
+;; Or a separate library for each. So this current project to just contain KeyStore and
+;;
+
 (>defn upsert-new-value! [conn table-kludge? [table id :as ident] m]
   [map? boolean? eql/ident? map? => any?]
-  ;; TODO: We should figure out how to make each of these "drivers" optional so we don't explode ppls deps as we
-  ;; add new ones.  Perhaps generate multiple jars for clojars from this one project, or use dyn ns resolution?
   (let [last-value (or (car/wcar conn (car/get ident)) {})]
     (car/wcar conn (car/set ident (merge last-value m)))
     (when table-kludge?

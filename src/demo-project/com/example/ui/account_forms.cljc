@@ -35,6 +35,8 @@
 (form/defsc-form AccountForm [this props]
   {fo/id                  account/id
    ;   ::form/read-only?          true
+   ::form/confirm    (fn [message]
+                       #?(:cljs (js/confirm message)))
    fo/attributes          [account/name
                            account/primary-address
                            account/role timezone/zone-id account/email
