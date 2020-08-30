@@ -2,9 +2,9 @@
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
     [taoensso.carmine :as car :refer (wcar)]
-    [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
+    [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read]
     [general.dev :as dev]
-    [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
@@ -52,23 +52,23 @@
 ;; Doesn't work so simplify
 ;;
 (defn write-first []
-  (key-value-write/write-tree adaptor pathom-env (key-value-read/map->ident m) m))
+  (kv-write/write-tree adaptor pathom-env (kv-read/map->ident m) m))
 
 ;; Works like this
 (defn write-simply []
-  (car/wcar server1-conn (car/set (key-value-read/map->ident m) m)))
+  (car/wcar server1-conn (car/set (kv-read/map->ident m) m)))
 
 (defn then-read-from-outer []
-  (dev/log-on "reading the row" (key-value-read/read-tree adaptor pathom-env (key-value-read/map->ident m))))
+  (dev/log-on "reading the row" (kv-read/read-tree adaptor pathom-env (kv-read/map->ident m))))
 
 (defn then-read-from-inner []
-  (dev/log-on "reading the row" (dev/pp-str (kv-adaptor/read* adaptor pathom-env (key-value-read/map->ident m)))))
+  (dev/log-on "reading the row" (dev/pp-str (kv-adaptor/read* adaptor pathom-env (kv-read/map->ident m)))))
 
 ;;
 ;; Needed to remove duplicates
 ;;
 (defn test-flatten-1 []
-  (key-value-write/flatten m))
+  (kv-write/flatten m))
 
 ;;
 ;; Now simplify by writing two doing doseq and see if they there

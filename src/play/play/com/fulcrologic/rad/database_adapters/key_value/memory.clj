@@ -1,12 +1,13 @@
 (ns play.com.fulcrologic.rad.database-adapters.key-value.memory
   (:require
+    [com.example.components.seeded-connection :refer [all-tables!]]
     [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
     [general.dev :as dev]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-    [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write :refer [value-of ident-of]]
-    [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [value-of ident-of]]
+    [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read]
     [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
 (def pathom-env {})
@@ -36,9 +37,9 @@
 
 (defn write-and-read-1 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-1" (atom {}))]
-    (key-value-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id 1
+    (kv-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id 1
                                                                   :some-table/greeting "Hi"})
-    (dev/log-on "reading the row" (key-value-read/read-tree ks pathom-env [:some-table/id 1]))))
+    (dev/log-on "reading the row" (kv-read/read-tree ks pathom-env [:some-table/id 1]))))
 
 (defn greg []
   {:person/id   1
@@ -51,14 +52,15 @@
 (defn write-and-read-2 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
     (dev/log-on "Whole DB just written:")
-    (key-value-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id        1
+    (kv-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id        1
                                                                   :some-table/greeting  "Hi"
                                                                   :some-table/leg-count 3
                                                                   :some-table/sitters   [(greg) (sally)]
                                                                   :some-table/finish    {:finish/id       4
                                                                                          :finish/battered true
                                                                                          :finish/colour   "red"}})
-    (dev/pp (kv-adaptor/db-f ks pathom-env))
+    (doseq [table (all-tables!)]
+      (dev/pp (kv-adaptor/read* ks pathom-env table)))
     (dev/log-on "Individual reads")
     ;(dev/pp (read* db env [:person/id 2] true))
-    (key-value-read/read-compact ks pathom-env [:some-table/id 1])))
+    (kv-read/read-compact ks pathom-env [:some-table/id 1])))

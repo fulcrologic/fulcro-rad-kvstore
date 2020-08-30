@@ -1,12 +1,12 @@
 (ns play.com.fulcrologic.rad.database-adapters.key-value.write
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]))
 
 (defn x-1 []
-  [(key-value-write/before-after? {:before :a :after :b})
-   (key-value-write/before-after? {:before :a :afterwards :b})])
+  [(kv-write/before-after? {:before :a :after :b})
+   (kv-write/before-after? {:before :a :afterwards :b})])
 
 ;
 ;([[:line-item/id 1] #:line-item{:id 1, :hash 7}]
@@ -17,4 +17,4 @@
   (let [m {:invoice/id         1
            :invoice/line-items [{:line-item/id 1 :line-item/hash 7}
                                 {:line-item/id 2 :line-item/hash 5}]}]
-    (key-value-write/flatten m)))
+    (kv-write/flatten m)))

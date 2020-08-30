@@ -4,7 +4,7 @@
             [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-            [com.fulcrologic.rad.database-adapters.key-value.read :as key-value-read]
+            [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.rad.form :as form]
             [com.wsscode.pathom.core :as p]
@@ -16,7 +16,7 @@
             [com.fulcrologic.rad.authorization :as auth]
             [edn-query-language.core :as eql]
             [clojure.spec.alpha :as s]
-            [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write]
+            [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
             [taoensso.timbre :as log]))
 
 ;; TODO: Move comments like this to ns docstring or fn docstring. Ppl rarely look at source
@@ -83,7 +83,7 @@
   (let [idents (keys delta)
         fulcro-tempid->generated-id (into {} (keep (fn [[k id :as ident]]
                                                      (when (tempid/tempid? id)
-                                                       [id (key-value-read/unwrap-id env k id)])) idents))]
+                                                       [id (kv-read/unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
 (defn tempid->intermediate-id [{::attr/keys [key->attribute]} delta]
@@ -113,7 +113,7 @@
       (log/debug "on schema" schema)
       (if connection
         (try
-          (key-value-write/write-delta connection env delta)
+          (kv-write/write-delta connection env delta)
           (let [tempid->real-id (into {}
                                       (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
                                       (keys tempid->string))]
@@ -175,7 +175,7 @@
 (defn get-by-ids
   [db env idents]
   (mapv (fn [ident]
-          (key-value-read/read-compact db env ident))
+          (kv-read/read-compact db env ident))
         idents))
 
 (defn entity-query
@@ -193,10 +193,8 @@
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
           idents (mapv (fn [id]
-                         [qualified-key (key-value-read/unwrap-id env qualified-key id)])
+                         [qualified-key (kv-read/unwrap-id env qualified-key id)])
                        ids)]
-      (when (-> (kv-adaptor/db-f db env) count zero?)
-        (log/warn "Empty key value store" (kv-adaptor/instance-name-f db env)))
       (let [result (get-by-ids db env idents)]
         (if one?
           (first result)

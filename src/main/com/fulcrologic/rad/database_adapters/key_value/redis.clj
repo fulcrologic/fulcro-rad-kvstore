@@ -51,18 +51,17 @@
 ;; But this comes at a performance cost.
 ;;
 (deftype RedisKeyStore [conn table-kludge?] kv-adaptor/KeyStore
-  (-db-f [this env] conn)
   (-instance-name-f [this env] (-> conn :spec :uri))
   (-read* [this env ident-or-idents-or-table]
     (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
       (case cardinality
         :ident (car/wcar conn (car/get ident-or-idents-or-table))
-        :keyword (if (not table-kludge?)
-                   (do
-                     (log/error "table" ident-or-idents-or-table "cannot be queried with table-kludge? set to false")
-                     {})
-                   (->> (car/wcar conn (car/get ident-or-idents-or-table))
-                        (mapv (fn [id] {ident-or-idents-or-table id}))))
+        :table (if (not table-kludge?)
+                 (do
+                   (log/error "table" ident-or-idents-or-table "cannot be queried with table-kludge? set to false")
+                   {})
+                 (->> (car/wcar conn (car/get ident-or-idents-or-table))
+                      (mapv (fn [id] {ident-or-idents-or-table id}))))
         :idents (car/wcar conn (mapv (fn [ident] (car/get ident)) ident-or-idents-or-table)))))
   (-write* [this env pairs-of-ident-map]
     (inner-write! conn table-kludge? pairs-of-ident-map))

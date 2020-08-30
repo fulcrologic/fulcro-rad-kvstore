@@ -30,22 +30,21 @@
 ;; See read-tree
 ;; However we still preference EQL/Pathom by always returning a map
 ;;
-(defn batch-of-rows [this env table]
-  (->> (kv-adaptor/db-f this env)
+(defn batch-of-rows [m env table]
+  (->> m
        keys
        (filter #(= table (first %)))
        (mapv (fn [[table id]] {table id}))))
 
 (deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
-  (-db-f [this env] (deref a))
   (-instance-name-f [this env] keystore-name)
   (-read* [this env ident-or-idents-or-table]
     (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
       (case cardinality
-        :ident (get (kv-adaptor/db-f this env) ident-or-idents-or-table)
-        :keyword (batch-of-rows this env ident-or-idents-or-table)
+        :ident (get @a ident-or-idents-or-table)
+        :table (batch-of-rows @a env ident-or-idents-or-table)
         :idents (mapv (fn [ident]
-                        (get (kv-adaptor/db-f this env) ident))
+                        (get @a ident))
                       ident-or-idents-or-table))))
   (-write* [this env pairs-of-ident-map]
     (inner-write a env pairs-of-ident-map))

@@ -5,7 +5,7 @@
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.example.components.config :as config]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as key-value-pathom]
-    [com.fulcrologic.rad.database-adapters.key-value.write :as key-value-write :refer [ident-of value-of]]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -65,9 +65,9 @@
   (dt/set-timezone! "America/Los_Angeles")
   (log/info "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection {}))
   (doseq [table (all-tables!)]
-    (key-value-write/remove-table-rows! connection {} table))
+    (kv-write/remove-table-rows! connection {} table))
   (doseq [[table id value] (all-entities!)]
-    (key-value-write/write-tree connection {} [table id] value)))
+    (kv-write/write-tree connection {} [table id] value)))
 
 ;;
 ;; We've got a tiny database so let's seed it every time we refresh.
