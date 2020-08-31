@@ -4,7 +4,7 @@
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-            [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read :refer [slash-id-keyword?]]
+            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read :refer [slash-id-keyword?]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
             [clojure.spec.alpha :as s]))
@@ -38,7 +38,7 @@
 (defn to-one-join? [x]
   (when (map-entry? x)
     (let [[k v] x]
-      ((some-fn kv-read/slash-id-ident? kv-read/slash-id-map?) v))))
+      ((some-fn kv-entity-read/slash-id-ident? kv-entity-read/slash-id-entity?) v))))
 
 (defn to-many-join? [x]
   (when (map-entry? x)
@@ -68,8 +68,8 @@
 
 (defn ident-ify [[attrib v]]
   (cond
-    (map? v) [attrib (kv-read/map->ident v)]
-    (and (vector? v) (-> v first map?)) [attrib (mapv #(kv-read/map->ident %) v)]
+    (map? v) [attrib (kv-entity-read/entity->ident v)]
+    (and (vector? v) (-> v first map?)) [attrib (mapv #(kv-entity-read/entity->ident %) v)]
     (eql/ident? v) [attrib v]
     (and (vector? v) (-> v first eql/ident?)) [attrib v]
     :else [attrib v]))
@@ -105,15 +105,15 @@
     (to-one-join? x) (let [[k v] x]
                        (if (eql/ident? v)
                          [v]
-                         (mapcat first-parse-flatten (assoc v (gen-protected-id!) [(kv-read/map->ident v) v]))))
+                         (mapcat first-parse-flatten (assoc v (gen-protected-id!) [(kv-entity-read/entity->ident v) v]))))
     (to-many-join? x) (let [[k v] x]
                         (mapcat first-parse-flatten v))
     (map-entry? x) []
-    (map? x) (mapcat first-parse-flatten (assoc x (gen-protected-id!) [(kv-read/map->ident x) x]))
-    (kv-read/slash-id-ident? x) [x]))
+    (map? x) (mapcat first-parse-flatten (assoc x (gen-protected-id!) [(kv-entity-read/entity->ident x) x]))
+    (kv-entity-read/slash-id-ident? x) [x]))
 
 (defn flatten [m]
-  (->> (first-parse-flatten (assoc m (gen-protected-id!) [(kv-read/map->ident m) m]))
+  (->> (first-parse-flatten (assoc m (gen-protected-id!) [(kv-entity-read/entity->ident m) m]))
        ;; ignore the [ident] entries, assuming they are already in state
        (remove eql/ident?)
        (map (fn [[ident m]]
@@ -135,9 +135,10 @@
 (>defn remove-table-rows!
   [ks env table]
   [::kv-adaptor/key-store map? keyword? => any?]
-  (let [idents (->> (kv-adaptor/read* ks env table)
+  (let [idents (->> (kv-adaptor/read-table ks env table)
                     (map (fn [m] [table (get m table)])))]
     (doseq [ident idents]
+      ;(assert (eql/ident? ident))
       (kv-adaptor/remove1 ks env ident))))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))

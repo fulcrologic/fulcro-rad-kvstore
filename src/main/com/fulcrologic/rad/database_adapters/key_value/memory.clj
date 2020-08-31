@@ -1,13 +1,13 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.memory
+  "A reference implementation of ::kv-adaptor/KeyStore that uses a Clojure atom as the database"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-    [com.fulcrologic.rad.ids :refer [new-uuid]]))
+    [com.fulcrologic.rad.ids :refer [new-uuid]]
+    [general.dev :as dev]))
 
-;; TODO: Public functions should have docstrings
-(>defn feed-pair [env st pair]
-  [map? map? any? => map?]
+(defn- feed-pair [st pair]
   (let [[ident m] (if (map? pair)
                     (first pair)
                     pair)]
@@ -15,40 +15,35 @@
 
 (defn- inner-write
   [a env pairs-of-ident-map]
-  (let [feed-pair (partial feed-pair env)]
-    (swap!-> a
-             ((fn [st]
-                (reduce
-                  feed-pair
-                  st
-                  (cond
-                    ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
-                    (map? pairs-of-ident-map) (into [] pairs-of-ident-map))))))))
+  (swap!-> a
+           ((fn [st]
+              (reduce
+                feed-pair
+                st
+                (cond
+                  ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
+                  (map? pairs-of-ident-map) (into [] pairs-of-ident-map)))))))
 
-;;
-;; read-outer* allows you to get a completely denormalized tree from an ident
-;; See read-tree
-;; However we still preference EQL/Pathom by always returning a map
-;;
-(defn batch-of-rows [m env table]
+(>defn batch-of-rows
+  "We preference EQL/Pathom by always returning maps rather than idents"
+  [m table]
+  [map? keyword? => vector?]
   (->> m
        keys
        (filter #(= table (first %)))
        (mapv (fn [[table id]] {table id}))))
 
 (deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
-  (-instance-name-f [this env] keystore-name)
-  (-read* [this env ident-or-idents-or-table]
-    (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
-      (case cardinality
-        :ident (get @a ident-or-idents-or-table)
-        :table (batch-of-rows @a env ident-or-idents-or-table)
-        :idents (mapv (fn [ident]
-                        (get @a ident))
-                      ident-or-idents-or-table))))
+  (-instance-name-f [this] keystore-name)
+  (-read* [this env idents]
+    (mapv (fn [ident] (get @a ident)) idents))
+  (-read1 [this env ident]
+    (get @a ident))
+  (-read-table [this env table]
+    (batch-of-rows @a table))
   (-write* [this env pairs-of-ident-map]
     (inner-write a env pairs-of-ident-map))
   (-write1 [this env ident m]
     (inner-write a env [[ident m]]))
   (-remove1 [this env ident]
-    (swap! a update dissoc ident)))
+    (swap! a dissoc ident)))

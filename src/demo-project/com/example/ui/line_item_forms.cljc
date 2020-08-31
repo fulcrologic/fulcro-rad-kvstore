@@ -10,8 +10,6 @@
     [com.fulcrologic.rad.type-support.decimal :as math]
     [com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.form-options :as fo]
-    [taoensso.timbre :as log]
-    [com.fulcrologic.fulcro.application :as app]
     [com.fulcrologic.fulcro.ui-state-machines :as uism]
     [com.fulcrologic.fulcro.algorithms.normalized-state :as fns]))
 

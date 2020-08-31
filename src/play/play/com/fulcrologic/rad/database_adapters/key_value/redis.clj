@@ -2,7 +2,7 @@
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
     [taoensso.carmine :as car :refer (wcar)]
-    [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read]
+    [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
     [general.dev :as dev]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
@@ -10,7 +10,6 @@
 
 (def uri "redis://127.0.0.1:6379/")
 (def server1-conn {:pool {} :spec {:uri uri}})
-(defmacro wcar* [& body] `(car/wcar server1-conn ~@body))
 
 (defn x-1 []
   (car/wcar server1-conn (car/ping)))
@@ -52,17 +51,17 @@
 ;; Doesn't work so simplify
 ;;
 (defn write-first []
-  (kv-write/write-tree adaptor pathom-env (kv-read/map->ident m) m))
+  (kv-write/write-tree adaptor pathom-env (kv-entity-read/entity->ident m) m))
 
 ;; Works like this
 (defn write-simply []
-  (car/wcar server1-conn (car/set (kv-read/map->ident m) m)))
+  (car/wcar server1-conn (car/set (kv-entity-read/entity->ident m) m)))
 
 (defn then-read-from-outer []
-  (dev/log-on "reading the row" (kv-read/read-tree adaptor pathom-env (kv-read/map->ident m))))
+  (dev/log-on "reading the row" (kv-entity-read/read-tree adaptor pathom-env (kv-entity-read/entity->ident m))))
 
 (defn then-read-from-inner []
-  (dev/log-on "reading the row" (dev/pp-str (kv-adaptor/read* adaptor pathom-env (kv-read/map->ident m)))))
+  (dev/log-on "reading the row" (dev/pp-str (kv-adaptor/read1 adaptor pathom-env (kv-entity-read/entity->ident m)))))
 
 ;;
 ;; Needed to remove duplicates
@@ -95,5 +94,3 @@
                            server1-conn
                            [:account/id (new-uuid 101)]
                            {:account/id (new-uuid 101)})))
-
-

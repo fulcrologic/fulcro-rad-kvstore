@@ -17,14 +17,14 @@
     [com.example.model.item :as item]
     [com.wsscode.pathom.core :as p]
     [com.fulcrologic.rad.type-support.date-time :as dt]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as key-value-pathom]))
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
 (defstate parser
   :start
   (pathom/new-parser config
     [(attr/pathom-plugin all-attributes)
      (form/pathom-plugin save/middleware delete/middleware)
-     (key-value-pathom/pathom-plugin (fn [env] {:production (:main kv-connection)}))
+     (kv-pathom/pathom-plugin (fn [env] {:production (:main kv-connection)}))
      {::p/wrap-parser
       (fn transform-parser-out-plugin-external [parser]
         (fn transform-parser-out-plugin-internal [env tx]

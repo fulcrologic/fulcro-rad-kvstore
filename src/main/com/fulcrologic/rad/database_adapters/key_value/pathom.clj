@@ -4,7 +4,7 @@
             [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-            [com.fulcrologic.rad.database-adapters.key-value.read :as kv-read]
+            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.rad.form :as form]
             [com.wsscode.pathom.core :as p]
@@ -19,12 +19,11 @@
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
             [taoensso.timbre :as log]))
 
-;; TODO: Move comments like this to ns docstring or fn docstring. Ppl rarely look at source
-;; We always return a map containing only one database - the :main one.
-;; Not like the datomic implementation of the same function, that will return many databases.
-;; So many databases might be in the config file, enabling us to easily switch one of them to be :main
-;;
-(>defn start-database [_ {::key-value/keys [databases config]}]
+(>defn start-database
+  "Returns a map containing only one database - the `:main` one.
+  Not like the datomic implementation of the same function, that will return many databases.
+  So many databases can be in the config file, and switch one of them to be `:main`"
+  [_ {::key-value/keys [databases config]}]
   [any? map? => map?]
   (let [{:key-value/keys [kind] :as main-database} (:main databases)]
     (when (nil? main-database)
@@ -62,15 +61,14 @@
           ::key-value/connections database-connection-map
           ::key-value/databases databases)))))
 
-(def keys-in-delta
-  (fn keys-in-delta [delta]
-    (let [id-keys (into #{}
-                        (map first)
-                        (keys delta))
-          all-keys (into id-keys
-                         (mapcat keys)
-                         (vals delta))]
-      all-keys)))
+(defn- keys-in-delta [delta]
+  (let [id-keys (into #{}
+                      (map first)
+                      (keys delta))
+        all-keys (into id-keys
+                       (mapcat keys)
+                       (vals delta))]
+    all-keys))
 
 (defn schemas-for-delta [{::attr/keys [key->attribute]} delta]
   (let [all-keys (keys-in-delta delta)
@@ -79,11 +77,23 @@
                       all-keys)]
     schemas))
 
+(defn unwrap-id
+  "Generate an id. You need to pass a `suggested-id` as a UUID or a tempid. If it is a tempid and the ID column is a UUID, then
+  the UUID *from* the tempid will be used."
+  [{::attr/keys [key->attribute] :as env} k suggested-id]
+  (let [{::attr/keys [type]} (key->attribute k)]
+    (cond
+      (= :uuid type) (cond
+                       (tempid/tempid? suggested-id) (:id suggested-id)
+                       (uuid? suggested-id) suggested-id
+                       :else (throw (ex-info "Only unwrapping of tempid/uuid is supported" {:id suggested-id})))
+      :otherwise (throw (ex-info "Cannot generate an ID for non-uuid ID attribute" {:attribute k})))))
+
 (defn tempids->generated-ids [{::attr/keys [key->attribute] :as env} delta]
   (let [idents (keys delta)
         fulcro-tempid->generated-id (into {} (keep (fn [[k id :as ident]]
                                                      (when (tempid/tempid? id)
-                                                       [id (kv-read/unwrap-id env k id)])) idents))]
+                                                       [id (unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
 (defn tempid->intermediate-id [{::attr/keys [key->attribute]} delta]
@@ -172,33 +182,56 @@
    (fn [{::form/keys [params] :as pathom-env}]
      (delete-entity! pathom-env params))))
 
-(defn get-by-ids
-  [db env idents]
-  (mapv (fn [ident]
-          (kv-read/read-compact db env ident))
-        idents))
+(>defn idents->value-hof
+  "reference is an ident or a vector of idents, or a scalar (in which case not a reference)"
+  [ks env]
+  [::kv-adaptor/key-store map? => fn?]
+  (fn [reference]
+    (cond
+      (eql/ident? reference) (let [[table id] reference]
+                               {table id})
+      (vector? reference) (let [recurse-f (idents->value-hof ks env)]
+                            (mapv recurse-f reference))
+      :else reference)))
+
+(defn read-compact
+  "Reads once from the database using ::kv-adaptor/read1 then transforms the ident joins into /id only (ident-like) maps"
+  [ks env ident]
+  (let [entity (kv-adaptor/read1 ks env ident)]
+    (when entity
+      (into {}
+            (map (fn [[k v]]
+                   (if (nil? v)
+                     (do
+                       (log/warn "nil value in database for attribute" k)
+                       [k v])
+                     [k ((idents->value-hof ks env) v)])))
+            entity))))
 
 (defn entity-query
+  "Performs the query of the Key Value database. Uses the id-attribute that needs to be resolved and the input to the
+  resolver which will contain that id/s the need to be queried for"
   [{::key-value/keys [id-attribute]
-    ::attr/keys    [schema attributes]
-    :as            env}
+    ::attr/keys      [schema attributes]
+    :as              env}
    input]
   (let [{::attr/keys [qualified-key]} id-attribute
-        one? (not (sequential? input))]
-    (let [db (some-> (get-in env [::key-value/databases schema]) deref)
-          _ (when-not (satisfies? kv-adaptor/KeyStore db)
-              (throw (ex-info "db is not a KeyStore" {:schema schema :db db
-                                                      :databases (keys (get env ::key-value/databases))})))
-          ids (if one?
-                [(get input qualified-key)]
-                (into [] (keep #(get % qualified-key)) input))
-          idents (mapv (fn [id]
-                         [qualified-key (kv-read/unwrap-id env qualified-key id)])
-                       ids)]
-      (let [result (get-by-ids db env idents)]
-        (if one?
-          (first result)
-          result)))))
+        one? (not (sequential? input))
+        db (some-> (get-in env [::key-value/databases schema]) deref)]
+    (if-not (satisfies? kv-adaptor/KeyStore db)
+      (throw (ex-info "db is not a KeyStore" {:schema    schema
+                                              :db        db
+                                              :databases (keys (get env ::key-value/databases))}))
+      (let [ids (if one?
+                  [(get input qualified-key)]
+                  (into [] (keep #(get % qualified-key)) input))
+            idents (mapv (fn [id]
+                           [qualified-key (unwrap-id env qualified-key id)])
+                         ids)]
+        (let [result (mapv #(read-compact db env %) idents)]
+          (if one?
+            (first result)
+            result))))))
 
 (>defn fix-id-keys
   "Fix the ID keys recursively on result."

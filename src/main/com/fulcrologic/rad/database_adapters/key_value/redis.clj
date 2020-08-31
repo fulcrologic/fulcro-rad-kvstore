@@ -13,7 +13,9 @@
 ;; TODO: We should figure out how to make each of these "drivers" optional so we don't explode ppls deps as we
 ;; add new ones.  Perhaps generate multiple jars for clojars from this one project, or use dyn ns resolution?
 ;; C
-;; Or a separate library for each. So this current project to just contain KeyStore and
+;; Or a separate library for each. So this current deps.edn project to just contain KeyStore and MemoryKeyStore.
+;; Hive off RedisKeyStore into another deps.edn project. Thus Room for expansion in each. Whilst Redis might be
+;; small the others will be a lot more work (as will need equivalent of Nippy to be part of them right??)
 ;;
 
 (>defn upsert-new-value! [conn table-kludge? [table id :as ident] m]
@@ -57,18 +59,18 @@
 ;; But this comes at a performance cost.
 ;;
 (deftype RedisKeyStore [conn table-kludge?] kv-adaptor/KeyStore
-  (-instance-name-f [this env] (-> conn :spec :uri))
-  (-read* [this env ident-or-idents-or-table]
-    (let [cardinality (kv-adaptor/cardinality ident-or-idents-or-table)]
-      (case cardinality
-        :ident (car/wcar conn (car/get ident-or-idents-or-table))
-        :table (if (not table-kludge?)
-                 (do
-                   (log/error "table" ident-or-idents-or-table "cannot be queried with table-kludge? set to false")
-                   {})
-                 (->> (car/wcar conn (car/get ident-or-idents-or-table))
-                      (mapv (fn [id] {ident-or-idents-or-table id}))))
-        :idents (car/wcar conn (mapv (fn [ident] (car/get ident)) ident-or-idents-or-table)))))
+  (-instance-name-f [this] (-> conn :spec :uri))
+  (-read1 [this env ident]
+    (car/wcar conn (car/get ident)))
+  (-read* [this env idents]
+    (car/wcar conn (mapv (fn [ident] (car/get ident)) idents)))
+  (-read-table [this env table]
+    (if (not table-kludge?)
+      (do
+        (log/error "table" table "cannot be queried with table-kludge? set to false")
+        {})
+      (->> (car/wcar conn (car/get table))
+           (mapv (fn [id] {table id})))))
   (-write* [this env pairs-of-ident-map]
     (inner-write! conn table-kludge? pairs-of-ident-map))
   (-write1 [this env ident m]

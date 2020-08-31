@@ -4,7 +4,7 @@
     [com.example.model :refer [all-attributes]]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.example.components.config :as config]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as key-value-pathom]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.model.seed :as seed]
@@ -63,7 +63,7 @@
 (>defn seed! [connection]
   [::kv-adaptor/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
-  (log/info "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection {}))
+  (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection))
   (doseq [table (all-tables!)]
     (kv-write/remove-table-rows! connection {} table))
   (doseq [[table id value] (all-entities!)]
@@ -75,6 +75,6 @@
 ;; ^{:on-reload :noop}
 ;;
 (defstate kv-connection
-  :start (let [{:keys [main] :as databases} (key-value-pathom/start-database all-attributes config/config)]
+  :start (let [{:keys [main] :as databases} (kv-pathom/start-database all-attributes config/config)]
            (seed! main)
            databases))
