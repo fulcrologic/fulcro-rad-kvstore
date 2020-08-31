@@ -11,7 +11,7 @@
 #_(defn write-and-read-3 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-3" (atom {}))
         barb (seed/new-account (new-uuid 103) "Barbara" "barb@example.com" "letmein")]
-    (key-value-write/write-tree ks pathom-env (ident-of barb) (value-of barb))
+    (key-value-write/write-tree ks pathom-env (value-of barb))
     (dev/log-on "Just written:")
     (dev/pp (kv-adaptor/db-f ks pathom-env))
     (kv-adaptor/write1 ks pathom-env (ident-of barb) {:account/active? false})

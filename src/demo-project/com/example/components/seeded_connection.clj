@@ -9,13 +9,18 @@
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.type-support.date-time :as dt]
-    [taoensso.timbre :as log]))
+    [com.fulcrologic.rad.type-support.date-time :as dt]))
 
-(defn all-tables! []
+(defn all-tables!
+  "All the tables that we are going to have entities of. This information is in the RAD registry, we just haven't gone
+  that far yet"
+  []
   [:account/id :item/id :invoice/id :line-item/id :category/id :address/id])
 
-(defn all-entities! []
+(defn all-entities!
+  "There is no check done on the integrity of this data. But when putting it together the functions ident-of and value-of are
+  supposed to help. Just make sure that for every ident-of there is at least one value-of of the same entity"
+  []
   (let [date-1 (dt/html-datetime-string->inst "2020-01-01T12:00")
         date-2 (dt/html-datetime-string->inst "2020-01-05T12:00")
         date-3 (dt/html-datetime-string->inst "2020-02-01T12:00")
@@ -60,21 +65,25 @@
      (seed/new-invoice date-5 (ident-of barb)
                        [(value-of (seed/new-line-item (ident-of building-blocks) 10 20.0M))])]))
 
-(>defn seed! [connection]
+(>defn seed!
+  "Get rid of all data in the database then build it again from the data structure at all-entities"
+  [connection]
   [::kv-adaptor/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
   (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection))
+  ;; Later put these in database namespace, get shapes by spec, so can import, purge, export, then from/to edn as well
   (doseq [table (all-tables!)]
     (kv-write/remove-table-rows! connection {} table))
   (doseq [[table id value] (all-entities!)]
-    (kv-write/write-tree connection {} [table id] value)))
+    (kv-write/write-tree connection {} value)))
 
 ;;
-;; We've got a tiny database so let's seed it every time we refresh.
-;; Far less confusing - change the seed function and it will be run!
+;; We've got a tiny database so let's seed it every time we refresh
+;; Far less confusing not to have this :on-reload thing - change the seed function and it will be run!
 ;; ^{:on-reload :noop}
 ;;
 (defstate kv-connection
+  "The connection to the database that has just been freshly populated"
   :start (let [{:keys [main] :as databases} (kv-pathom/start-database all-attributes config/config)]
            (seed! main)
            databases))

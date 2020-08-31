@@ -3,6 +3,7 @@
     [edn-query-language.core :as eql]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [taoensso.timbre :as log]))
 
 (>defn slash-id-keyword?
@@ -77,7 +78,7 @@
   "Given the starting point of an ident or an entity will recursively keep reading the joins,
   returning the expanded tree"
   [ks env m]
-  [::kv-adaptor/key-store map? ::kv-adaptor/ident-like-map => (? map?)]
+  [::kv-adaptor/key-store map? ::key-value/ident-like-map => (? map?)]
   (let [ident (into [] (first m))
         entity (kv-adaptor/read1 ks env ident)]
     (when entity

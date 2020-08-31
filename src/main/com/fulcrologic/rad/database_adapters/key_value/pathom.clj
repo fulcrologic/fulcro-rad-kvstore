@@ -23,9 +23,10 @@
   "Returns a map containing only one database - the `:main` one.
   Not like the datomic implementation of the same function, that will return many databases.
   So many databases can be in the config file, and switch one of them to be `:main`"
-  [_ {::key-value/keys [databases config]}]
+  [_ {::key-value/keys [databases]}]
   [any? map? => map?]
-  (let [{:key-value/keys [kind] :as main-database} (:main databases)]
+  (let [{:key-value/keys [kind table-kludge?] :as main-database
+         :or {table-kludge? false}} (:main databases)]
     (when (nil? main-database)
       (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
     (when (nil? kind)
@@ -33,8 +34,7 @@
     {:main (case kind
              :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}))
              :redis (let [{:redis/keys [uri]} main-database
-                          conn {:pool {} :spec {:uri uri}}
-                          {:key-value/keys [table-kludge?]} config]
+                          conn {:pool {} :spec {:uri uri}}]
                       (redis-adaptor/->RedisKeyStore conn table-kludge?)))}))
 
 (defn pathom-plugin
@@ -61,7 +61,9 @@
           ::key-value/connections database-connection-map
           ::key-value/databases databases)))))
 
-(defn- keys-in-delta [delta]
+(defn- keys-in-delta
+  "Copied from or very similar to datomic function of same name"
+  [delta]
   (let [id-keys (into #{}
                       (map first)
                       (keys delta))
@@ -70,7 +72,9 @@
                        (vals delta))]
     all-keys))
 
-(defn schemas-for-delta [{::attr/keys [key->attribute]} delta]
+(defn schemas-for-delta
+  "Copied from or very similar to datomic function of same name"
+  [{::attr/keys [key->attribute]} delta]
   (let [all-keys (keys-in-delta delta)
         schemas (into #{}
                       (keep #(-> % key->attribute ::attr/schema))
@@ -89,19 +93,24 @@
                        :else (throw (ex-info "Only unwrapping of tempid/uuid is supported" {:id suggested-id})))
       :otherwise (throw (ex-info "Cannot generate an ID for non-uuid ID attribute" {:attribute k})))))
 
-(defn tempids->generated-ids [{::attr/keys [key->attribute] :as env} delta]
+(defn tempids->generated-ids
+  "Copied from or very similar to datomic function of same name"
+  [{::attr/keys [key->attribute] :as env} delta]
   (let [idents (keys delta)
         fulcro-tempid->generated-id (into {} (keep (fn [[k id :as ident]]
                                                      (when (tempid/tempid? id)
                                                        [id (unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
-(defn tempid->intermediate-id [{::attr/keys [key->attribute]} delta]
+(defn tempid->intermediate-id
+  "Copied from or very similar to datomic function of same name"
+  [{::attr/keys [key->attribute]} delta]
   (let [tempids (set (sp/select (sp/walker tempid/tempid?) delta))
         fulcro-tempid->real-id (into {} (map (fn [t] [t (str (:id t))]) tempids))]
     fulcro-tempid->real-id))
 
 (>defn delta->tempid-maps
+  "Copied from or very similar to datomic function of same name"
   [env delta]
   [map? map? => map?]
   (let [tempid->txid (tempid->intermediate-id env delta)

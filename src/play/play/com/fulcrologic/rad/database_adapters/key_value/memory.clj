@@ -31,8 +31,8 @@
 
 (defn write-and-read-1 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-1" (atom {}))]
-    (kv-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id       1
-                                                           :some-table/greeting "Hi"})
+    (kv-write/write-tree ks pathom-env {:some-table/id       1
+                                        :some-table/greeting "Hi"})
     (dev/log-on "reading the row" (kv-entity-read/read-tree ks pathom-env [:some-table/id 1]))))
 
 (defn greg []
@@ -46,13 +46,13 @@
 (defn write-and-read-2 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
     (dev/log-on "Whole DB just written:")
-    (kv-write/write-tree ks pathom-env [:some-table/id 1] {:some-table/id        1
-                                                           :some-table/greeting  "Hi"
-                                                           :some-table/leg-count 3
-                                                           :some-table/sitters   [(greg) (sally)]
-                                                           :some-table/finish    {:finish/id       4
-                                                                                  :finish/battered true
-                                                                                  :finish/colour   "red"}})
+    (kv-write/write-tree ks pathom-env {:some-table/id        1
+                                        :some-table/greeting  "Hi"
+                                        :some-table/leg-count 3
+                                        :some-table/sitters   [(greg) (sally)]
+                                        :some-table/finish    {:finish/id       4
+                                                               :finish/battered true
+                                                               :finish/colour   "red"}})
     (doseq [table (all-tables!)]
       (dev/pp (kv-adaptor/read-table ks pathom-env table)))
     (dev/log-on "Individual reads")

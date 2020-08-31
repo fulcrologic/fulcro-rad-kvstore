@@ -9,6 +9,7 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
@@ -65,16 +66,10 @@
   (let [db (:main kv-connection)]
     (kv-adaptor/instance-name-f db)))
 
-(defn whole-db []
+(defn entire-db []
   (let [db (:main kv-connection)
         env (env)]
-    (doseq [table (all-tables!)]
-      (let [entities (->> (kv-adaptor/read-table db env table)
-                          (map (fn [m]
-                                 (let [ident [table (get m table)]]
-                                   (kv-adaptor/read1 db env ident)))))]
-        (dev/log-on table)
-        (dev/pp entities)))))
+    (dev/pp (kv-database/export db env (all-tables!)))))
 
 (defn test-remove-all []
   (let [db (:main kv-connection)]

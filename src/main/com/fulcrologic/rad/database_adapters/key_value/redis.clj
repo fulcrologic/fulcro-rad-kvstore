@@ -68,7 +68,7 @@
     (if (not table-kludge?)
       (do
         (log/error "table" table "cannot be queried with table-kludge? set to false")
-        {})
+        [])
       (->> (car/wcar conn (car/get table))
            (mapv (fn [id] {table id})))))
   (-write* [this env pairs-of-ident-map]

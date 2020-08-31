@@ -8,3 +8,4 @@ node_modules
 resources/public/js
 .nrepl-port
 /package-lock.json
+/assert.txt

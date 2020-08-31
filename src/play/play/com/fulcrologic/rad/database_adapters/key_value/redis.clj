@@ -51,7 +51,7 @@
 ;; Doesn't work so simplify
 ;;
 (defn write-first []
-  (kv-write/write-tree adaptor pathom-env (kv-entity-read/entity->ident m) m))
+  (kv-write/write-tree adaptor pathom-env m))
 
 ;; Works like this
 (defn write-simply []

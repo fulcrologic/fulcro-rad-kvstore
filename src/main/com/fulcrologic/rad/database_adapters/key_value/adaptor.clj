@@ -8,6 +8,7 @@
     ks (memory-adaptor/->MemoryKeyStore \"human consumption identifier\" (atom {}))
     adaptor (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri \"redis://127.0.0.1:6379/\"}} true)"
   (:require [edn-query-language.core :as eql]
+            [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [clojure.spec.alpha :as s]))
 
@@ -31,12 +32,6 @@
   (-remove1 [this env ident]))
 
 (s/def ::key-store #(satisfies? KeyStore %))
-
-(s/def ::ident-like-map (every-pred map? #(= 1 (count %))))
-
-(s/def ::idents (s/coll-of eql/ident? :kind vector?))
-
-(s/def ::pairs-of-ident-map any?)
 
 (defn instance-name-f
   "A human readable identifier for this KeyStore"
@@ -65,13 +60,13 @@
   then this operation will not be supported (MemoryKeyStore excepted)
   Usually used in conjunction with ::kv-entity-read/read-tree-hof (where hof stands for higher order function)"
   [this env table]
-  [::key-store map? keyword? => (s/coll-of ::ident-like-map :kind vector?)]
+  [::key-store map? keyword? => (s/coll-of ::key-value/ident-like-map :kind vector?)]
   (-read-table this env table))
 
 (>defn write*
   "Submit entities to be stored, in the form [[ident entity]...], where ident is [table id] and the entity is a map"
   [this env pairs-of-ident-map]
-  [::key-store map? ::pairs-of-ident-map => any?]
+  [::key-store map? ::key-value/pairs-of-ident-map => any?]
   (-write* this env pairs-of-ident-map))
 
 (>defn write1
