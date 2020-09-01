@@ -18,6 +18,8 @@
                            invoice/attributes
                            line-item/attributes
                            sales/attributes
-                           timezone/attributes)))
+                           ;; This is Datomic specific
+                           ;timezone/attributes
+                           )))
 
 (def all-attribute-validator (attr/make-attribute-validator all-attributes))

@@ -51,7 +51,7 @@
 (>defn entity->ident
   "Given an entity, return the ident for that entity"
   [m]
-  [map? => eql/ident?]
+  [map? => ::key-value/ident]
   (let [[k v] (first (entity->eql-result m))]
     [k v]))
 

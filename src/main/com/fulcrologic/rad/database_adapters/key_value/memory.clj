@@ -4,8 +4,7 @@
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-    [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [general.dev :as dev]))
+    [com.fulcrologic.rad.ids :refer [new-uuid]]))
 
 (defn- feed-pair [st pair]
   (let [[ident m] (if (map? pair)
@@ -34,7 +33,6 @@
        (mapv (fn [[table id]] {table id}))))
 
 (deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
-  (-instance-name-f [this] keystore-name)
   (-read* [this env idents]
     (mapv (fn [ident] (get @a ident)) idents))
   (-read1 [this env ident]
@@ -46,4 +44,6 @@
   (-write1 [this env ident m]
     (inner-write a env [[ident m]]))
   (-remove1 [this env ident]
-    (swap! a dissoc ident)))
+    (swap! a dissoc ident))
+  (-instance-name [this]
+    keystore-name))

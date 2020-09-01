@@ -4,7 +4,6 @@
             [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.rad.form :as form]
             [com.wsscode.pathom.core :as p]
@@ -26,7 +25,7 @@
   [_ {::key-value/keys [databases]}]
   [any? map? => map?]
   (let [{:key-value/keys [kind table-kludge?] :as main-database
-         :or {table-kludge? false}} (:main databases)]
+         :or             {table-kludge? false}} (:main databases)]
     (when (nil? main-database)
       (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
     (when (nil? kind)
@@ -56,7 +55,10 @@
   (p/env-wrap-plugin
     (fn [env]
       (let [database-connection-map (database-mapper env)
-            databases (sp/transform [sp/MAP-VALS] (fn [v] (atom v)) database-connection-map)]
+            databases (into {}
+                            (map (fn [[k v]]
+                                   [k (atom v)]))
+                            database-connection-map)]
         (assoc env
           ::key-value/connections database-connection-map
           ::key-value/databases databases)))))

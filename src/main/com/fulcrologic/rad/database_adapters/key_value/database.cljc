@@ -5,6 +5,11 @@
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]))
 
 ;;
+;; This 'potential' ns and write share things in common. Things may move around between them...
+;; Is there entity/database, read/write
+;;
+
+;;
 ;; Later we can export to an edn file then import back in
 ;;
 (>defn export

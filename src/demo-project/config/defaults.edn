@@ -8,11 +8,11 @@
                                             :datomic/prevent-changes? true}}
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
-                                    {:other {:key-value/kind          :redis
+                                    {:main  {:key-value/kind          :redis
                                              :key-value/schema        :production
                                              :key-value/table-kludge? true
                                              :redis/uri               "redis://127.0.0.1:6379/"}
-                                     :main  {:key-value/kind   :clojure-atom
+                                     :other {:key-value/kind   :clojure-atom
                                              :key-value/schema :production}}
 
 

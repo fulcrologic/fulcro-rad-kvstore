@@ -43,6 +43,10 @@
   {:person/id   2
    :person/name "Sally"})
 
+(defn test-specs []
+  (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
+    (kv-adaptor/key-store? ks)))
+
 (defn write-and-read-2 []
   (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
     (dev/log-on "Whole DB just written:")

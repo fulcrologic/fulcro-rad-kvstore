@@ -3,7 +3,7 @@
     [clojure.string :as str]
     [com.example.model :as model]
     [com.example.model.account :as account]
-    [com.example.model.timezone :as timezone]
+    ;[com.example.model.timezone :as timezone]
     [com.example.ui.address-forms :refer [AddressForm]]
     [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
     [com.fulcrologic.fulcro.mutations :refer [defmutation]]
@@ -25,7 +25,7 @@
                                                                               (first)
                                                                               (str/lower-case))
                                                                             "")]
-                                                               (str/starts-with? (get form field) prefix))
+                                                               (and (get form field) (str/starts-with? (get form field) prefix)))
                                               (= :valid (model/all-attribute-validator form field))))))
 
 ;; NOTE: Limitation: Each "storage location" requires a form. The ident of the component matches the identity
@@ -39,7 +39,9 @@
                        #?(:cljs (js/confirm message)))
    fo/attributes          [account/name
                            account/primary-address
-                           account/role timezone/zone-id account/email
+                           account/role
+                           ;timezone/zone-id
+                           account/email
                            account/active? account/addresses]
    fo/default-values      {:account/active?         true
                            :account/primary-address {}

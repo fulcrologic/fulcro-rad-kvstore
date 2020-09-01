@@ -3,6 +3,7 @@
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+            [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read :refer [slash-id-keyword?]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
@@ -32,7 +33,7 @@
   are indicating that elsewhere the referred to entity is being included in its entirety. No need to repeat information.
   See com.example.components.seeded-connection/seed!"
   [[table id value]]
-  [(s/tuple slash-id-keyword? uuid? map?) => eql/ident?]
+  [::key-value/table-id-entity => ::key-value/ident]
   [table id])
 
 (>defn value-of
@@ -40,7 +41,7 @@
   tree data structures that ::kv-write/write-tree knows how to store.
   See com.example.components.seeded-connection/seed!"
   [[table id value]]
-  [(s/tuple slash-id-keyword? uuid? map?) => map?]
+  [::key-value/table-id-entity => map?]
   value)
 
 (defn- to-one-join?
@@ -128,11 +129,12 @@
     (map? x) (mapcat first-parse-flatten (assoc x (gen-protected-id!) [(kv-entity-read/entity->ident x) x]))
     (kv-entity-read/slash-id-ident? x) [x]))
 
-(defn flatten
+(>defn flatten
   "To comprehend and process recursive information we flatten it, but without losing any information. There is no
   check done on the integrity of the data. But when putting it together the functions `ident-of` and `value-of` are
   supposed to help. Just make sure that for every `ident-of` there is at least one `value-of` of the same entity"
   [m]
+  [map? => ::key-value/pairs-of-ident-map]
   (->> (first-parse-flatten (assoc m (gen-protected-id!) [(kv-entity-read/entity->ident m) m]))
        ;; ignore the [ident] entries, assuming they are already in state
        (remove eql/ident?)

@@ -70,7 +70,7 @@
   [connection]
   [::kv-adaptor/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
-  (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name-f connection))
+  (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name connection))
   ;; Later put these in database namespace, get shapes by spec, so can import, purge, export, then from/to edn as well
   (doseq [table (all-tables!)]
     (kv-write/remove-table-rows! connection {} table))

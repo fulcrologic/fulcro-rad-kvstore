@@ -23,20 +23,24 @@
 ;; TODO: These all need docstrings. The ns would also ideally have a rather large docstring describing general use
 ;; or at least referring to mem store as reference
 (defprotocol KeyStore
-  (-instance-name-f [this])
   (-read-table [this env table])
   (-read* [this env idents])
   (-read1 [this env ident])
   (-write* [this env pairs-of-ident-map])
   (-write1 [this env ident m])
-  (-remove1 [this env ident]))
+  (-remove1 [this env ident])
+  (-instance-name [this])
+  )
 
-(s/def ::key-store #(satisfies? KeyStore %))
+(defn key-store? [x]
+  (satisfies? KeyStore x))
 
-(defn instance-name-f
+(s/def ::key-store key-store?)
+
+(defn instance-name
   "A human readable identifier for this KeyStore"
   [this]
-  (-instance-name-f this))
+  (-instance-name this))
 
 (defn read*
   "Returns the entities associated with the sequence of idents asked for. Is not recursive, so just returns what is at
@@ -44,12 +48,12 @@
   [this env idents]
   (-read* this env idents))
 
-(defn read1
+(>defn read1
   "Returns the entity associated with an ident. Not recursive, so just returns what is at the ident's location,
   with join values as idents or vectors of idents. See `::kv-entity-read/read-tree` for a recursive way to read
   entities from the Key Value store"
   [this env ident]
-  [::key-store map? eql/ident? => ]
+  [::key-store map? ::key-value/ident => map?]
   (-read1 this env ident))
 
 (>defn read-table
@@ -72,11 +76,11 @@
 (>defn write1
   "Submit an entity to be stored, [ident entity], where ident key is [table id] and the entity is a map"
   [this env ident m]
-  [::key-store map? eql/ident? map? => any?]
+  [::key-store map? ::key-value/ident map? => any?]
   (-write1 this env ident m))
 
 (>defn remove1
   "Remove an ident from storage"
   [this env ident]
-  [::key-store map? eql/ident? => any?]
+  [::key-store map? ::key-value/ident => any?]
   (-remove1 this env ident))

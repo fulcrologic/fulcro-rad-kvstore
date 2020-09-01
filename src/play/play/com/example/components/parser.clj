@@ -64,7 +64,7 @@
 
 (defn view-current-connection []
   (let [db (:main kv-connection)]
-    (kv-adaptor/instance-name-f db)))
+    (kv-adaptor/instance-name db)))
 
 (defn entire-db []
   (let [db (:main kv-connection)

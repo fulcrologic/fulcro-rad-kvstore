@@ -1,12 +1,12 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.redis
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [taoensso.carmine :as car]
-    [taoensso.timbre :as log]
-    [edn-query-language.core :as eql]))
+    [taoensso.timbre :as log]))
 
 ;;
 ;; T
@@ -19,7 +19,7 @@
 ;;
 
 (>defn upsert-new-value! [conn table-kludge? [table id :as ident] m]
-  [map? boolean? eql/ident? map? => any?]
+  [map? boolean? ::key-value/ident map? => any?]
   (let [last-value (or (car/wcar conn (car/get ident)) {})]
     (car/wcar conn (car/set ident (merge last-value m)))
     (when table-kludge?
@@ -30,7 +30,7 @@
         (car/wcar conn (car/set table to-store))))))
 
 (>defn remove-row [conn table-kludge? [table id :as ident]]
-  [map? boolean? eql/ident? => any?]
+  [map? boolean? ::key-value/ident => any?]
   (car/wcar conn (car/set ident nil))
   (when table-kludge?
     (let [row-ids (car/wcar conn (car/get table))
@@ -59,7 +59,6 @@
 ;; But this comes at a performance cost.
 ;;
 (deftype RedisKeyStore [conn table-kludge?] kv-adaptor/KeyStore
-  (-instance-name-f [this] (-> conn :spec :uri))
   (-read1 [this env ident]
     (car/wcar conn (car/get ident)))
   (-read* [this env idents]
@@ -76,4 +75,6 @@
   (-write1 [this env ident m]
     (inner-write! conn table-kludge? [[ident m]]))
   (-remove1 [this env ident]
-    (remove-row conn table-kludge? ident)))
+    (remove-row conn table-kludge? ident))
+  (-instance-name [this]
+    (-> conn :spec :uri)))

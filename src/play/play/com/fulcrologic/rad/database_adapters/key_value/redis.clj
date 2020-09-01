@@ -47,6 +47,9 @@
 
 (def adaptor (redis-adaptor/->RedisKeyStore server1-conn true))
 
+(defn test-specs []
+  (kv-adaptor/key-store? adaptor))
+
 ;;
 ;; Doesn't work so simplify
 ;;
