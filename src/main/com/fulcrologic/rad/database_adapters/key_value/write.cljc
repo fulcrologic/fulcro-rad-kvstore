@@ -1,14 +1,16 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.write
+  "All entry points for writing to a ::key-value/KeyStore that are outside the protocol itself. ::write-tree and
+  ::remove-table-rows are the ones to be familiar with"
   (:refer-clojure :exclude [flatten])
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
-            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read :refer [slash-id-keyword?]]
+            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
-            [clojure.spec.alpha :as s]))
+            [taoensso.timbre :as log]))
 
 ;;
 ;; TODO (This is a 'done' but leaving b/c questions answered, wipe after read!)
@@ -18,12 +20,12 @@
 ;; Why is `value` even names here when the function does not use it?
 ;;
 ;; C
-;; Assertions are development only. So it shouldn't matter so much if you make a mistake. But I guess you are saying
-;; people forget to make sure of this in production JVMs.
+;; Assertions are development only. So it shouldn't matter so much if you get the assertion wrong. But I guess you
+;; are saying people forget to make sure of this in production JVMs.
 ;;
 ;; An 'always on' assert would be a `throw`. I've now changed a few assertions to throws.
 ;;
-;; True `value` doesn't need to be there. The signatures of these two functions just need to be the same because of how
+;; `value` doesn't need to be there. The signatures of these two functions just need to be the same because of how
 ;; they are used. I do care that the types are correct, even though they are selectively ignored. They are
 ;; being used to compose the seeded data.
 ;;
@@ -44,12 +46,33 @@
   [::key-value/table-id-entity => map?]
   value)
 
+(defn id-attribute
+  "Obtains the /id attribute from an entity"
+  [m]
+  [any? => (? ::key-value/id-keyword)]
+  (when (map? m)
+    (let [id-attributes (filter key-value/id-keyword? (keys m))
+          attribute (first id-attributes)]
+      (when (> (count id-attributes) 1)
+        (log/error "More than one candidate id attribute, picked" attribute))
+      attribute)))
+
+(def id-entity?
+  "Does the entity have a proper /id attribute?"
+  id-attribute)
+
+(defn id-ident?
+  "Is it an ident of an entity?"
+  [x]
+  (and (eql/ident? x)
+       (-> x first key-value/id-keyword?)))
+
 (defn- to-one-join?
   "This map-entry has a value that indicates it is a reference to one other"
   [x]
   (when (map-entry? x)
     (let [[k v] x]
-      ((some-fn kv-entity-read/slash-id-ident? kv-entity-read/slash-id-entity?) v))))
+      ((some-fn id-ident? id-entity?) v))))
 
 (defn- to-many-join?
   "This map-entry has a value that indicates it is a reference to many others (as long as have already counted out
@@ -60,7 +83,7 @@
       (vector? v))))
 
 (defn- parent-keyword? [k]
-  (and (keyword? k)
+  (and (qualified-keyword? k)
        (= (namespace k) "parent-join")))
 
 (defn- parent-join? [x]
@@ -82,12 +105,34 @@
     {}
     m))
 
+(>defn entity->eql-result
+  "Remove all attribute keys from the entity except for the identifying one. Thus returns a map with only one
+  map-entry, the /id one, which is what Pathom wants to return from a resolver"
+  ([m id-attribute]
+   [map? (? qualified-keyword?) => map?]
+   (let [id-attribute (or id-attribute (id-attribute m))]
+     (when (nil? id-attribute)
+       ;; We want to be /id by RAD config but have not yet done.
+       (throw (ex-info "Every value/map stored in the Key Value DB must have an /id attribute (current implementation limitation)"
+                       {:keys (keys m)})))
+     {id-attribute (get m id-attribute)}))
+  ([m]
+   [map? => map?]
+   (entity->eql-result m nil)))
+
+(>defn entity->ident
+  "Given an entity, return the ident for that entity"
+  [m]
+  [map? => ::key-value/ident]
+  (let [[k v] (first (entity->eql-result m))]
+    [k v]))
+
 (defn ident-ify
   "Turn a join into an ident. Are losing information. Makes sense after flattening."
   [[attrib v]]
   (cond
-    (map? v) [attrib (kv-entity-read/entity->ident v)]
-    (and (vector? v) (-> v first map?)) [attrib (mapv #(kv-entity-read/entity->ident %) v)]
+    (map? v) [attrib (entity->ident v)]
+    (and (vector? v) (-> v first map?)) [attrib (mapv #(entity->ident %) v)]
     (eql/ident? v) [attrib v]
     (and (vector? v) (-> v first eql/ident?)) [attrib v]
     :else [attrib v]))
@@ -122,12 +167,12 @@
     (to-one-join? x) (let [[k v] x]
                        (if (eql/ident? v)
                          [v]
-                         (mapcat first-parse-flatten (assoc v (gen-protected-id!) [(kv-entity-read/entity->ident v) v]))))
+                         (mapcat first-parse-flatten (assoc v (gen-protected-id!) [(entity->ident v) v]))))
     (to-many-join? x) (let [[k v] x]
                         (mapcat first-parse-flatten v))
     (map-entry? x) []
-    (map? x) (mapcat first-parse-flatten (assoc x (gen-protected-id!) [(kv-entity-read/entity->ident x) x]))
-    (kv-entity-read/slash-id-ident? x) [x]))
+    (map? x) (mapcat first-parse-flatten (assoc x (gen-protected-id!) [(entity->ident x) x]))
+    (id-ident? x) [x]))
 
 (>defn flatten
   "To comprehend and process recursive information we flatten it, but without losing any information. There is no
@@ -135,7 +180,7 @@
   supposed to help. Just make sure that for every `ident-of` there is at least one `value-of` of the same entity"
   [m]
   [map? => ::key-value/pairs-of-ident-map]
-  (->> (first-parse-flatten (assoc m (gen-protected-id!) [(kv-entity-read/entity->ident m) m]))
+  (->> (first-parse-flatten (assoc m (gen-protected-id!) [(entity->ident m) m]))
        ;; ignore the [ident] entries, assuming they are already in state
        (remove eql/ident?)
        (map (fn [[ident m]]
@@ -155,9 +200,8 @@
 (>defn remove-table-rows!
   "Given a table find out all its rows and remove them"
   [ks env table]
-  [::kv-adaptor/key-store map? keyword? => any?]
-  (let [idents (->> (kv-adaptor/read-table ks env table)
-                    (map (fn [m] [table (get m table)])))]
+  [::kv-adaptor/key-store map? ::key-value/id-keyword => any?]
+  (let [idents (kv-adaptor/read-table ks env table)]
     (doseq [ident idents]
       (kv-adaptor/remove1 ks env ident))))
 

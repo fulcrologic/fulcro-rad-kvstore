@@ -1,4 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.redis
+  "An implementation of ::kv-adaptor/KeyStore for Redis"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
@@ -15,7 +16,7 @@
 ;; C
 ;; Or a separate library for each. So this current deps.edn project to just contain KeyStore and MemoryKeyStore.
 ;; Hive off RedisKeyStore into another deps.edn project. Thus Room for expansion in each. Whilst Redis might be
-;; small the others will be a lot more work (as will need equivalent of Nippy to be part of them right??)
+;; small currently the others will be a lot more work (as will need equivalent of Nippy to be part of them right??)
 ;;
 
 (>defn upsert-new-value! [conn table-kludge? [table id :as ident] m]
@@ -68,8 +69,7 @@
       (do
         (log/error "table" table "cannot be queried with table-kludge? set to false")
         [])
-      (->> (car/wcar conn (car/get table))
-           (mapv (fn [id] {table id})))))
+      (mapv (fn [id] [table id]) (car/wcar conn (car/get table)))))
   (-write* [this env pairs-of-ident-map]
     (inner-write! conn table-kludge? pairs-of-ident-map))
   (-write1 [this env ident m]

@@ -11,7 +11,8 @@
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
     (let [read-tree (kv-entity-read/read-tree-hof db env)]
       (if (:show-inactive? query-params)
-        (kv-adaptor/read-table db env :account/id)
+        (->> (kv-adaptor/read-table db env :account/id)
+             (mapv (fn [[table id]] {table id})))
         (->> (kv-adaptor/read-table db env :account/id)
              (map read-tree)
              (filter :account/active?)
@@ -27,7 +28,8 @@
              (map read-tree)
              (filter #(#{id} (-> % :item/category :category/id)))
              (mapv #(select-keys % [:item/id])))
-        (kv-adaptor/read-table db env :item/id)))
+        (->> (kv-adaptor/read-table db env :item/id)
+             (mapv (fn [[table id]] {table id})))))
     (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
 
 (defn get-customer-invoices [env {:account/keys [id]}]
@@ -42,7 +44,8 @@
 (defn get-all-invoices
   [env query-params]
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
-    (kv-adaptor/read-table db env :invoice/id)
+    (->> (kv-adaptor/read-table db env :invoice/id)
+         (mapv (fn [[table id]] {table id})))
     (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
 
 (defn get-invoice-customer-id
@@ -56,7 +59,8 @@
 (defn get-all-categories
   [env query-params]
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
-    (kv-adaptor/read-table db env :category/id)
+    (->> (kv-adaptor/read-table db env :category/id)
+         (mapv (fn [[table id]] {table id})))
     (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
 
 (defn get-line-item-category

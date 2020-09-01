@@ -1,7 +1,7 @@
 (ns com.example.components.parser
   (:require
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
-    [com.example.components.seeded-connection :refer [kv-connection]]
+    [com.example.components.seeded-connection :refer [kv-connections]]
     [com.example.components.config :refer [config]]
     [com.example.components.delete-middleware :as delete]
     [com.example.components.save-middleware :as save]
@@ -24,7 +24,7 @@
   (pathom/new-parser config
     [(attr/pathom-plugin all-attributes)
      (form/pathom-plugin save/middleware delete/middleware)
-     (kv-pathom/pathom-plugin (fn [env] {:production (:main kv-connection)}))
+     (kv-pathom/pathom-plugin (fn [env] {:production (:main kv-connections)}))
      {::p/wrap-parser
       (fn transform-parser-out-plugin-external [parser]
         (fn transform-parser-out-plugin-internal [env tx]

@@ -2,6 +2,7 @@
   "A reference implementation of ::kv-adaptor/KeyStore that uses a Clojure atom as the database"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]))
@@ -13,7 +14,7 @@
     (update st ident merge m)))
 
 (defn- inner-write
-  [a env pairs-of-ident-map]
+  [a pairs-of-ident-map]
   (swap!-> a
            ((fn [st]
               (reduce
@@ -24,13 +25,12 @@
                   (map? pairs-of-ident-map) (into [] pairs-of-ident-map)))))))
 
 (>defn batch-of-rows
-  "We preference EQL/Pathom by always returning maps rather than idents"
+  "We preference read-tree by always returning idents"
   [m table]
-  [map? keyword? => vector?]
+  [map? ::key-value/id-keyword? => vector?]
   (->> m
        keys
-       (filter #(= table (first %)))
-       (mapv (fn [[table id]] {table id}))))
+       (filterv #(= table (first %)))))
 
 (deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
   (-read* [this env idents]
@@ -40,9 +40,9 @@
   (-read-table [this env table]
     (batch-of-rows @a table))
   (-write* [this env pairs-of-ident-map]
-    (inner-write a env pairs-of-ident-map))
+    (inner-write a pairs-of-ident-map))
   (-write1 [this env ident m]
-    (inner-write a env [[ident m]]))
+    (inner-write a [[ident m]]))
   (-remove1 [this env ident]
     (swap! a dissoc ident))
   (-instance-name [this]

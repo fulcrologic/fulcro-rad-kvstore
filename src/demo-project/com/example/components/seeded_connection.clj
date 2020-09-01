@@ -4,12 +4,12 @@
     [com.example.model :refer [all-attributes]]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.example.components.config :as config]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.type-support.date-time :as dt]))
+    [com.fulcrologic.rad.type-support.date-time :as dt]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
 
 (defn all-tables!
   "All the tables that we are going to have entities of. This information is in the RAD registry, we just haven't gone
@@ -82,8 +82,8 @@
 ;; Far less confusing not to have this :on-reload thing - change the seed function and it will be run!
 ;; ^{:on-reload :noop}
 ;;
-(defstate kv-connection
+(defstate kv-connections
   "The connection to the database that has just been freshly populated"
-  :start (let [{:keys [main] :as databases} (kv-pathom/start-database all-attributes config/config)]
+  :start (let [{:keys [main] :as databases} (kv-database/start-database all-attributes config/config)]
            (seed! main)
            databases))

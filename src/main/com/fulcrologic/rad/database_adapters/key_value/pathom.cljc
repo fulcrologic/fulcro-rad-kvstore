@@ -1,7 +1,6 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.pathom
+  "Entry points for Pathom"
   (:require [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
-            [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
-            [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
             [clojure.pprint :refer [pprint]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.rad.attributes :as attr]
@@ -17,24 +16,6 @@
             [clojure.spec.alpha :as s]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
             [taoensso.timbre :as log]))
-
-(>defn start-database
-  "Returns a map containing only one database - the `:main` one.
-  Not like the datomic implementation of the same function, that will return many databases.
-  So many databases can be in the config file, and switch one of them to be `:main`"
-  [_ {::key-value/keys [databases]}]
-  [any? map? => map?]
-  (let [{:key-value/keys [kind table-kludge?] :as main-database
-         :or             {table-kludge? false}} (:main databases)]
-    (when (nil? main-database)
-      (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
-    (when (nil? kind)
-      (throw (ex-info "kind not found in :main database\n" {:database main-database})))
-    {:main (case kind
-             :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}))
-             :redis (let [{:redis/keys [uri]} main-database
-                          conn {:pool {} :spec {:uri uri}}]
-                      (redis-adaptor/->RedisKeyStore conn table-kludge?)))}))
 
 (defn pathom-plugin
   "A pathom plugin that adds the necessary KeyStore connections/databases (same thing) to the pathom env for
@@ -270,7 +251,7 @@
 (>defn key-value-result->pathom-result
   "Convert a query result into a pathom result"
   [k->a pathom-query result]
-  [(s/map-of keyword? ::attr/attribute) ::eql/query (? coll?) => (? coll?)]
+  [(s/map-of qualified-keyword? ::attr/attribute) ::eql/query (? coll?) => (? coll?)]
   (when result
     (let [{:keys [children]} (eql/query->ast pathom-query)]
       (if (vector? result)
