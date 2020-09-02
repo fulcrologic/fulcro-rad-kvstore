@@ -18,7 +18,7 @@
             [taoensso.timbre :as log]))
 
 (defn pathom-plugin
-  "A pathom plugin that adds the necessary KeyStore connections/databases (same thing) to the pathom env for
+  "A pathom plugin that adds the necessary `KeyStore` connections/databases (same thing) to the pathom env for
   a given request. Requires a database-mapper, which is a
   `(fn [pathom-env] {schema-name connection})` for a given request.
 
@@ -31,18 +31,22 @@
 
   This plugin should run before (be listed after) most other plugins in the plugin chain since
   it adds connection details to the parsing env.
-  "
+
+  This code is similar to the datomic-plugin's."
   [database-mapper]
   (p/env-wrap-plugin
     (fn [env]
       (let [database-connection-map (database-mapper env)
-            databases (into {}
-                            (map (fn [[k v]]
-                                   [k (atom v)]))
-                            database-connection-map)]
+            databases-1 (sp/transform [sp/MAP-VALS] (fn [v] (atom v)) database-connection-map)
+            databases-2 (into {}
+                              (map (fn [[k v]]
+                                     [k (atom v)]))
+                              database-connection-map)]
+        (when (not= databases-1 databases-2)
+          (throw (ex-info "databases-1 and databases-2 not equal" {:databases-1 databases-1 :databases-2 databases-2})))
         (assoc env
           ::key-value/connections database-connection-map
-          ::key-value/databases databases)))))
+          ::key-value/databases databases-2)))))
 
 (defn- keys-in-delta
   "Copied from or very similar to datomic function of same name"
@@ -85,24 +89,44 @@
                                                        [id (unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
+(defn tempids-in-delta [delta]
+  (into #{} (keep (fn [[table id :as ident]]
+                    (when (tempid/tempid? id)
+                      id))
+                  (keys delta))))
+
 (defn tempid->intermediate-id
-  "Copied from or very similar to datomic function of same name"
-  [{::attr/keys [key->attribute]} delta]
-  (let [tempids (set (sp/select (sp/walker tempid/tempid?) delta))
-        fulcro-tempid->real-id (into {} (map (fn [t] [t (str (:id t))]) tempids))]
+  "Copied from or very similar to datomic function of same name, except rid of specter use"
+  [delta]
+  (let [tempids-1 (set (sp/select (sp/walker tempid/tempid?) delta))
+        tempids-2 (tempids-in-delta delta)
+        _ (when (not= tempids-1 tempids-2)
+            (throw (ex-info "tempids-1 and tempids-2 not equal" {:tempids-1 tempids-1 :tempids-2 tempids-2})))
+        fulcro-tempid->real-id (into {} (map (fn [t] [t (str (:id t))]) tempids-2))]
     fulcro-tempid->real-id))
 
 (>defn delta->tempid-maps
   "Copied from or very similar to datomic function of same name"
   [env delta]
   [map? map? => map?]
-  (let [tempid->txid (tempid->intermediate-id env delta)
+  (let [tempid->txid (tempid->intermediate-id delta)
         tempid->generated-id (tempids->generated-ids env delta)]
     {:tempid->string       tempid->txid
      :tempid->generated-id tempid->generated-id}))
 
+;;
+;; TODO
+;; Currently the atom is serving no purpose with only one connection.
+;; Is only one connection fine?
+;; If so ::key-value/connections -> ::key-value/connection and same with databases, or get rid of databases
+;; altogether, as there is no difference between a connection and a database with KeyStore.
+;; Multiple databases can exist in the config file, but don't need to be in pathom env.
+;; However I suspect the answer is need to support multiple databases, and doesn't matter that connection is same as
+;; a database - the goal is to have it work same as the Datomic database adapter - support multiple databases at
+;; runtime.
+;;
 (defn save-form!
-  "Do all of the possible operations for the given form delta (save to all Key Value databases involved)"
+  "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
   [env {::form/keys [delta] :as save-params}]
   (let [schemas (schemas-for-delta env delta)
         result (atom {:tempids {}})]
@@ -127,7 +151,7 @@
           (catch Exception e
             (log/error e "Transaction failed!")
             {}))
-        (log/error "Unable to save form. Connection missing in env.")))
+        (log/error "Unable to save form. Connection missing in env." (keys env))))
     @result))
 
 (defn delete-entity!
@@ -139,7 +163,6 @@
                {:keys [::attr/schema]} (key->attribute pk)
                connection (-> env ::key-value/connections (get schema))]
               (do
-                (log/warn "Deleting (not yet tested)" ident)
                 (kv-adaptor/remove1 connection env ident)
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
@@ -187,7 +210,7 @@
       :else reference)))
 
 (defn read-compact
-  "Reads once from the database using ::kv-adaptor/read1 then transforms the ident joins into /id only (ident-like) maps"
+  "Reads once from the database using `::kv-adaptor/read1` then transforms the ident joins into /id only (ident-like) maps"
   [ks env ident]
   (let [entity (kv-adaptor/read1 ks env ident)]
     (when entity
@@ -225,12 +248,24 @@
             (first result)
             result))))))
 
+(defn first-identity-hof [k->a]
+  (fn [ast-nodes]
+    (->> ast-nodes
+         (filter (fn [{:keys [dispatch-key]}]
+                   (some-> dispatch-key k->a ::attr/identity?)))
+         first
+         :key)))
+
 (>defn fix-id-keys
   "Fix the ID keys recursively on result."
   [k->a ast-nodes result]
   [map? vector? map? => map?]
-  (let [id? (fn [{:keys [dispatch-key]}] (some-> dispatch-key k->a ::attr/identity?))
-        id-key (:key (sp/select-first [sp/ALL id?] ast-nodes))
+  (let [first-identity (first-identity-hof k->a)
+        id? (fn [{:keys [dispatch-key]}] (some-> dispatch-key k->a ::attr/identity?))
+        id-key-1 (:key (sp/select-first [sp/ALL id?] ast-nodes))
+        id-key-2 (first-identity ast-nodes)
+        _ (when (not= id-key-1 id-key-2)
+            (throw (ex-info "id-key-1 and id-key-2 not equal" {:id-key-1 id-key-1 :id-key-2 id-key-2})))
         join-key->children (into {}
                                  (comp
                                    (filter #(= :join (:type %)))
@@ -241,7 +276,6 @@
     (reduce-kv
       (fn [m k v]
         (cond
-          (= :db/id k) (assoc m id-key v)
           (and (join-key? k) (vector? v)) (assoc m k (mapv #(fix-id-keys k->a (join-key->children k) %) v))
           (and (join-key? k) (map? v)) (assoc m k (fix-id-keys k->a (join-key->children k) v))
           :otherwise (assoc m k v)))

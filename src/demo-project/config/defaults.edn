@@ -8,13 +8,13 @@
                                             :datomic/prevent-changes? true}}
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
-                                    {:main  {:key-value/kind          :redis
-                                             :key-value/schema        :production
-                                             :key-value/table-kludge? true
-                                             :redis/uri               "redis://127.0.0.1:6379/"}
-                                     :other {:key-value/kind   :clojure-atom
-                                             :key-value/schema :production}}
-
+ ;; The one that is :main will be picked up, the others ignored, but left here for reference.
+                                    {:ignored-1 {:key-value/kind          :redis
+                                                 :key-value/schema        :production
+                                                 :key-value/table-kludge? true
+                                                 :redis/uri               "redis://127.0.0.1:6379/"}
+                                     :main      {:key-value/kind   :clojure-atom
+                                                 :key-value/schema :production}}
 
  :ring.middleware/defaults-config   {:params    {:keywordize true
                                                  :multipart  true

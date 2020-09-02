@@ -1,5 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.memory
-  "A reference implementation of ::kv-adaptor/KeyStore that uses a Clojure atom as the database"
+  "A reference implementation of `::kv-adaptor/KeyStore` that uses a Clojure atom as the database"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
@@ -27,7 +27,7 @@
 (>defn batch-of-rows
   "We preference read-tree by always returning idents"
   [m table]
-  [map? ::key-value/id-keyword? => vector?]
+  [map? ::key-value/id-keyword => vector?]
   (->> m
        keys
        (filterv #(= table (first %)))))

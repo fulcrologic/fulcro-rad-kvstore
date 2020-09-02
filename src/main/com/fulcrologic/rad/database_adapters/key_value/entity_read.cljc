@@ -21,12 +21,13 @@
 
 ;;
 ;; TODO
-;; Currently there is no stop on infinite recursion but there should be. Something like stop at 20 times with a
-;; warning message that suggests to set `recursion-limit`.
+;; Fix recursion (see doc string)
 ;;
 (>defn read-tree
-  "Given the starting point of an ident will recursively keep reading the joins,
-  returning the expanded tree"
+  "Given the starting point of an ident will recursively keep reading the joins, returning the expanded tree.
+  Basically there is maximal tree explosion - every attribute on every entity and every reference followed.
+  Currently there is no stop on infinite recursion but there should be. Something like stop at 20 times with a
+  warning message that suggests to set `recursion-limit` (not yet implemented)."
   [ks env ident]
   [::kv-adaptor/key-store map? ::key-value/ident => (? map?)]
   (let [entity (kv-adaptor/read1 ks env ident)

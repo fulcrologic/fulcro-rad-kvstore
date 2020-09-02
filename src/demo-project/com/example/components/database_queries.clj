@@ -80,8 +80,6 @@
                      (map read-tree)
                      (filter #(= username (:account/email %)))
                      first)]
-    ;; TODO
-    ;; Make it crash on arrival before fixing
     (log/warn "account (TZ is key and s/be string)" (:time-zone/zone-id account))
     account))
 

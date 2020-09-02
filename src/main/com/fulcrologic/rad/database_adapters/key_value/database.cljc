@@ -10,9 +10,11 @@
 (>defn start-database
   "Returns a map containing only one database - the `:main` one.
   Not like the datomic implementation of the same function, that will return many databases.
-  So many databases can be in the config file, and switch one of them to be `:main`"
-  [_ {::key-value/keys [databases]}]
-  [any? map? => map?]
+  So many databases can be in the config file, and switch one of them to be `:main`
+  Also (unlike the datomic implementation) note that attributes are not passed in because there is no schema with Key
+  Value databases, hence no automatic schema generation is possible"
+  [{::key-value/keys [databases]}]
+  [map? => map?]
   (let [{:key-value/keys [kind table-kludge?] :as main-database
          :or             {table-kludge? false}} (:main databases)]
     (when (nil? main-database)
