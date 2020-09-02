@@ -223,7 +223,7 @@
     (:after v)
     v))
 
-(defn- handle-before-after-1 [_ m]
+(defn- expand-to-after [m]
   (->> m
        (map (fn [[attrib attrib-v]]
               [attrib (-> attrib-v
@@ -231,20 +231,21 @@
        (into {})))
 
 ;;
-;; Let's only use this when have an environment option for it.
-;; do-not-store-nil? true
-;; `nil` is of course usually legitimate to put in into a DB.
+;; Only use this when:
+;; :key-value/dont-store-nils? true (where default is false)
+;; `nil` is of course usually legitimate to put into a DB.
 ;; Could be handled earlier, at the form layer.
 ;;
-(defn- handle-before-after-2 [new-entity? m]
-  (into {}
-        (keep (fn [[attrib attrib-v]]
-                (if (before-after? attrib-v)
-                  (let [{:keys [before after]} attrib-v]
-                    (when-not (and new-entity? #_(= before after) (nil? after))
-                      [attrib after]))
-                  [attrib attrib-v])))
-        m))
+(defn- expand-to-after-no-nils-hof [new-entity?]
+  (fn [m]
+    (into {}
+          (keep (fn [[attrib attrib-v]]
+                  (if (before-after? attrib-v)
+                    (let [{:keys [before after]} attrib-v]
+                      (when-not (and new-entity? #_(= before after) (nil? after))
+                        [attrib after]))
+                    [attrib attrib-v])))
+          m)))
 
 (>defn write-delta
   "What a delta looks like (only one map-entry here):
@@ -264,7 +265,9 @@
                           (map (fn [[[table id] m]]
                                  (when (string? id)
                                    (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
-                                 (let [handle-before-after (partial handle-before-after-1 (tempid/tempid? id))]
+                                 (let [handle-before-after (if (:key-value/dont-store-nils? (kv-adaptor/options ks))
+                                                             (expand-to-after-no-nils-hof (tempid/tempid? id))
+                                                             expand-to-after)]
                                    [[table id] (-> m
                                                    handle-before-after
                                                    (assoc table id))])))

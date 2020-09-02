@@ -30,7 +30,7 @@
 ;;
 
 (defn write-and-read-1 []
-  (let [ks (memory-adaptor/->MemoryKeyStore "x-1" (atom {}))]
+  (let [ks (memory-adaptor/->MemoryKeyStore "x-1" (atom {}) {})]
     (kv-write/write-tree ks pathom-env {:some-table/id       1
                                         :some-table/greeting "Hi"})
     (dev/log-on "reading the row" (kv-entity-read/read-tree ks pathom-env [:some-table/id 1]))))
@@ -44,11 +44,11 @@
    :person/name "Sally"})
 
 (defn test-specs []
-  (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
+  (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}) {})]
     (kv-adaptor/key-store? ks)))
 
 (defn write-and-read-2 []
-  (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))]
+  (let [ks (memory-adaptor/->MemoryKeyStore "x-2" (atom {}) {})]
     (dev/log-on "Whole DB just written:")
     (kv-write/write-tree ks pathom-env {:some-table/id        1
                                         :some-table/greeting  "Hi"

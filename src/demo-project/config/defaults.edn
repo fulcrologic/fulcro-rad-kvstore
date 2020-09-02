@@ -9,12 +9,14 @@
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
  ;; The one that is :main will be picked up, the others ignored, but left here for reference.
-                                    {:ignored-1 {:key-value/kind          :redis
-                                                 :key-value/schema        :production
-                                                 :key-value/table-kludge? true
-                                                 :redis/uri               "redis://127.0.0.1:6379/"}
-                                     :main      {:key-value/kind   :clojure-atom
-                                                 :key-value/schema :production}}
+                                    {:ignored {:key-value/kind             :redis
+                                               :key-value/schema           :production
+                                               :key-value/table-kludge?    true
+                                               :key-value/dont-store-nils? true
+                                               :redis/uri                  "redis://127.0.0.1:6379/"}
+                                     :main    {:key-value/kind             :clojure-atom
+                                               :key-value/dont-store-nils? true
+                                               :key-value/schema           :production}}
 
  :ring.middleware/defaults-config   {:params    {:keywordize true
                                                  :multipart  true

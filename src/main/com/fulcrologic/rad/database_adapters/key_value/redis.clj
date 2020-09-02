@@ -42,7 +42,7 @@
         (car/wcar conn (car/set table to-store))))))
 
 (>defn remove-row
-  "Just set the ident to nil. Remove from row-ids of that table when `table-kludge?` is on"
+  "Just set the ident to nil. Remove from row-ids of that table when `:key-value/table-kludge?` is on"
   [conn table-kludge? [table id :as ident]]
   [map? boolean? ::key-value/ident => any?]
   (car/wcar conn (car/set ident nil))
@@ -58,29 +58,31 @@
     (upsert-new-value! conn table-kludge? ident m)))
 
 (defn- write!
-  [conn table-kludge? pairs-of-ident-map]
+  [conn {:key-value/keys [table-kludge?]} pairs-of-ident-map]
   (let [entries (cond
                   ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
                   (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
     (doseq [entry entries]
       (feed-pair! conn table-kludge? entry))))
 
-(deftype RedisKeyStore [conn table-kludge?] kv-adaptor/KeyStore
+(deftype RedisKeyStore [conn options] kv-adaptor/KeyStore
   (-read1 [this env ident]
     (car/wcar conn (car/get ident)))
   (-read* [this env idents]
     (car/wcar conn (mapv (fn [ident] (car/get ident)) idents)))
   (-read-table [this env table]
-    (if (not table-kludge?)
+    (if (not (:key-value/table-kludge? options))
       (do
-        (log/error "table" table "cannot be queried with `table-kludge?` set to false")
+        (log/error "table" table "cannot be queried with `:key-value/table-kludge?` set to" (:key-value/table-kludge? options))
         [])
       (mapv (fn [id] [table id]) (car/wcar conn (car/get table)))))
   (-write* [this env pairs-of-ident-map]
-    (write! conn table-kludge? pairs-of-ident-map))
+    (write! conn options pairs-of-ident-map))
   (-write1 [this env ident m]
-    (write! conn table-kludge? [[ident m]]))
+    (write! conn options [[ident m]]))
   (-remove1 [this env ident]
-    (remove-row conn table-kludge? ident))
+    (remove-row conn (:key-value/table-kludge? options) ident))
   (-instance-name [this]
-    (-> conn :spec :uri)))
+    (-> conn :spec :uri))
+  (-options [this]
+    options))

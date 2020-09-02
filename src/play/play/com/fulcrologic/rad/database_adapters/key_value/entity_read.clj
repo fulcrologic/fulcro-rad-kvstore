@@ -13,6 +13,6 @@
 
 (defn x-2 []
   (kv-entity-read/read-tree
-    (memory-adaptor/->MemoryKeyStore "x-2" (atom {}))
+    (memory-adaptor/->MemoryKeyStore "x-2" (atom {}) {})
     {}
     {:a 1 :b 2}))

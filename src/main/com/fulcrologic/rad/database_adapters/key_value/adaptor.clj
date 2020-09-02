@@ -7,8 +7,8 @@
 
   Creation examples:
 
-    ks (memory-adaptor/->MemoryKeyStore \"human consumption identifier\" (atom {}))
-    adaptor (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri \"redis://127.0.0.1:6379/\"}} true)
+    ks (memory-adaptor/->MemoryKeyStore \"human consumption identifier\" (atom {}) {})
+    adaptor (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri \"redis://127.0.0.1:6379/\"}} {:key-value/table-kludge? true})
 
   However you wouldn't create directly like this if using from RAD. Instead set one of your databases to be the `:main`
   one in a configuration file (defaults.edn in the example project) and have a mount `defstate` that calls
@@ -47,17 +47,13 @@
   (-write* [this env pairs-of-ident-map])
   (-write1 [this env ident m])
   (-remove1 [this env ident])
-  (-instance-name [this]))
+  (-instance-name [this])
+  (-options [this]))
 
 (defn key-store? [x]
   (satisfies? KeyStore x))
 
 (s/def ::key-store key-store?)
-
-(defn instance-name
-  "A human readable identifier for this KeyStore. This identifier was set at the time of `KeyStore` creation"
-  [this]
-  (-instance-name this))
 
 (defn read*
   "Returns the entities associated with the sequence of idents asked for. Is not recursive, so just returns what is at
@@ -96,7 +92,7 @@
     (->> (kv-adaptor/read-table db env :category/id)
          (mapv (fn [[table id]] {table id})))
 
-  This operation is not what Key Value stores meant for, in theory. If you have not set `::key-value/table-kludge?` to
+  This operation is not what Key Value stores meant for, in theory. If you have not set `:key-value/table-kludge?` to
   true then this operation will not be supported (`MemoryKeyStore` excepted). In the future this function will likely be
   replaced with another/others that are more 'list' rather than entity centric, and allow the library user to be more
   involved."
@@ -121,3 +117,13 @@
   [this env ident]
   [::key-store map? ::key-value/ident => any?]
   (-remove1 this env ident))
+
+(defn instance-name
+  "A human readable identifier for this KeyStore. This identifier was set at the time of `KeyStore` creation"
+  [this]
+  (-instance-name this))
+
+(defn options
+  "Options (all boolean so far) that were set at the time of `KeyStore` creation"
+  [this]
+  (-options this))

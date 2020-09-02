@@ -37,7 +37,7 @@
             (map (fn [[k v]]
                    (if (nil? v)
                      (do
-                       (log/warn "nil value in database for attribute" k)
+                       (log/warn "`::kv-entity-read/read-tree` nil value in database for attribute" k)
                        [k v])
                      [k (idents->value v)])))
             entity))))

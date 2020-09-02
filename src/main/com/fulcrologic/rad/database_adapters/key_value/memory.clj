@@ -32,7 +32,7 @@
        keys
        (filterv #(= table (first %)))))
 
-(deftype MemoryKeyStore [keystore-name a] kv-adaptor/KeyStore
+(deftype MemoryKeyStore [keystore-name a options] kv-adaptor/KeyStore
   (-read* [this env idents]
     (mapv (fn [ident] (get @a ident)) idents))
   (-read1 [this env ident]
@@ -46,4 +46,6 @@
   (-remove1 [this env ident]
     (swap! a dissoc ident))
   (-instance-name [this]
-    keystore-name))
+    keystore-name)
+  (-options [this]
+    options))

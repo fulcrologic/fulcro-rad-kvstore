@@ -42,7 +42,7 @@
                               (map (fn [[k v]]
                                      [k (atom v)]))
                               database-connection-map)]
-        (when (not= databases-1 databases-2)
+        (when (not= (-> databases-1 first key) (-> databases-2 first key))
           (throw (ex-info "databases-1 and databases-2 not equal" {:databases-1 databases-1 :databases-2 databases-2})))
         (assoc env
           ::key-value/connections database-connection-map
@@ -218,7 +218,7 @@
             (map (fn [[k v]]
                    (if (nil? v)
                      (do
-                       (log/warn "nil value in database for attribute" k)
+                       (log/warn "`::kv-pathom/read-compact` nil value in database for attribute" k)
                        [k v])
                      [k ((idents->value-hof ks env) v)])))
             entity))))

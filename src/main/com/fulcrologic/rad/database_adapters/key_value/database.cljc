@@ -15,17 +15,18 @@
   Value databases, hence no automatic schema generation is possible"
   [{::key-value/keys [databases]}]
   [map? => map?]
-  (let [{:key-value/keys [kind table-kludge?] :as main-database
-         :or             {table-kludge? false}} (:main databases)]
+  (let [{:key-value/keys [kind table-kludge? dont-store-nils?]
+         :or             {table-kludge? false dont-store-nils? false}
+         :as             main-database} (:main databases)]
     (when (nil? main-database)
       (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
     (when (nil? kind)
-      (throw (ex-info "kind not found in :main database\n" {:database main-database})))
+      (throw (ex-info ":kind not found in :main database\n" {:database main-database})))
     {:main (case kind
-             :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}))
+             :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}) main-database)
              :redis (let [{:redis/keys [uri]} main-database
                           conn {:pool {} :spec {:uri uri}}]
-                      (redis-adaptor/->RedisKeyStore conn table-kludge?)))}))
+                      (redis-adaptor/->RedisKeyStore conn main-database)))}))
 
 ;;
 ;; This 'potential' ns and write share things in common. Things may move around between them...
