@@ -32,7 +32,7 @@
   This plugin should run before (be listed after) most other plugins in the plugin chain since
   it adds connection details to the parsing env.
 
-  This code is similar to the datomic-plugin's."
+  This code is similar to the datomic-plugin's. However currently only one connection is supported, no sharding."
   [database-mapper]
   (p/env-wrap-plugin
     (fn [env]

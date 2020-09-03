@@ -2,7 +2,7 @@
   (:require
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
     [com.example.components.seeded-connection :refer [kv-connections]]
-    [com.example.components.config :refer [config]]
+    [com.example.components.config :as config]
     [com.example.components.delete-middleware :as delete]
     [com.example.components.save-middleware :as save]
     [com.example.model :refer [all-attributes]]
@@ -21,7 +21,7 @@
 
 (defstate parser
   :start
-  (pathom/new-parser config
+  (pathom/new-parser config/config
     [(attr/pathom-plugin all-attributes)
      (form/pathom-plugin save/middleware delete/middleware)
      (kv-pathom/pathom-plugin (fn [env] {:production (:main kv-connections)}))

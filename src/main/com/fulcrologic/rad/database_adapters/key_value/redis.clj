@@ -41,10 +41,9 @@
                        #{id})]
         (car/wcar conn (car/set table to-store))))))
 
-(>defn remove-row
+(defn remove-row
   "Just set the ident to nil. Remove from row-ids of that table when `:key-value/table-kludge?` is on"
   [conn table-kludge? [table id :as ident]]
-  [map? boolean? ::key-value/ident => any?]
   (car/wcar conn (car/set ident nil))
   (when table-kludge?
     (let [row-ids (car/wcar conn (car/get table))

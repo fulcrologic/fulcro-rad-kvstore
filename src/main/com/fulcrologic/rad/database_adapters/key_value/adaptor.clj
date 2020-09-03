@@ -12,7 +12,7 @@
 
   However you wouldn't create directly like this if using from RAD. Instead set one of your databases to be the `:main`
   one in a configuration file (defaults.edn in the example project) and have a mount `defstate` that calls
-  `::kv-database/start-database`.
+  `::kv-database/start`.
 
   The most primitive way to read is using the protocol directly. `::read1` returns what is stored at the ident - a
   single entity map where all references are idents. `::read*` is the plural version. `::read-table` accepts a
@@ -55,11 +55,12 @@
 
 (s/def ::key-store key-store?)
 
-(defn read*
+(>defn read*
   "Returns the entities associated with the sequence of idents asked for. Is not recursive, so just returns what is at
   the locations, with join values as idents or vectors of idents. A plural version of `::read1`. Both `::read1` and
   `::read*` are used internally by `::kv-entity-read/read-tree`"
   [this env idents]
+  [::key-store map? ::key-value/idents => (s/coll-of map? :kind vector?)]
   (-read* this env idents))
 
 (>defn read1
@@ -92,10 +93,10 @@
     (->> (kv-adaptor/read-table db env :category/id)
          (mapv (fn [[table id]] {table id})))
 
-  This operation is not what Key Value stores meant for, in theory. If you have not set `:key-value/table-kludge?` to
-  true then this operation will not be supported (`MemoryKeyStore` excepted). In the future this function will likely be
-  replaced with another/others that are more 'list' rather than entity centric, and allow the library user to be more
-  involved."
+  This operation is not what Key Value stores are meant for. If you have not set `:key-value/table-kludge?` to
+  true then this operation will not be supported (`MemoryKeyStore` excepted). Efficient querying is database vendor
+  specific. This function is meant for quick demos. Turn off `:key-value/table-kludge?` for anything else
+  and use the vendor specific recommendations/functionality to query."
   [this env table]
   [::key-store map? ::key-value/id-keyword => (s/coll-of ::key-value/ident :kind vector?)]
   (-read-table this env table))
@@ -118,12 +119,14 @@
   [::key-store map? ::key-value/ident => any?]
   (-remove1 this env ident))
 
-(defn instance-name
+(>defn instance-name
   "A human readable identifier for this KeyStore. This identifier was set at the time of `KeyStore` creation"
   [this]
+  [::key-store => string?]
   (-instance-name this))
 
-(defn options
+(>defn options
   "Options (all boolean so far) that were set at the time of `KeyStore` creation"
   [this]
+  [::key-store => map?]
   (-options this))

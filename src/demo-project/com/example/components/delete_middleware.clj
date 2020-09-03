@@ -1,5 +1,5 @@
 (ns com.example.components.delete-middleware
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as mw]))
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
-(def middleware (mw/wrap-delete))
+(def middleware (kv-pathom/wrap-delete))

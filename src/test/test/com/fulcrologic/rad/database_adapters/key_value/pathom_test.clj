@@ -16,7 +16,7 @@
             [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]))
 
 (deftest alter-existing
-  (let [{:keys [main]} (kv-database/start-database config/config)
+  (let [{:keys [main]} (kv-database/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -56,7 +56,7 @@
         user-tempid (tempid/tempid user-uuid)
         address-uuid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
         address-tempid (tempid/tempid address-uuid)
-        {:keys [main]} (kv-database/start-database config/config)
+        {:keys [main]} (kv-database/start config/config)
         email "chris@somemail.com.au"
         delta (new-user-delta user-tempid address-tempid email)
         key->attribute (attr/attribute-map all-attributes)

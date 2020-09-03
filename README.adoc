@@ -13,7 +13,111 @@ things as documents with keys.
 
 == Trying it Out
 
-This adapter is in development and is not yet ready for production. More information coming soon.
+This adaptor is in development and is not yet ready for production.
+
+This project currently consists of two implementations of the adaptor - in memory via a Clojure atom and Redis.
+
+A RAD Key Value Database Plugin uses the adaptor. In turn this plugin is used by a recent copy of the
+https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
+
+ RAD Demo -> Key Value Plugin -> Key Value Adaptor -> Redis | Firebase | MongoDB ...
+
+Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database is
+`:clojure-atom`. We don't want to have to install Redis just yet.
+
+In a terminal type `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the installation. For the
+server side setup a REPL choosing 'Run with Deps' with the alias `dev`. Optionally set 'JVM Args'
+to `-Dguardrails.enabled=true`. Bring the REPL up. `(user/refresh)` will reload the namespaces and `(user/restart)` will
+get the Demo's dependency graph of Mount components up and running.
+
+Back to the client. Bring a browser tab up at http://localhost:9630/ and start a watch on the `:main` build. When
+compilation is complete refresh the browser at http://localhost:3000/. The Demo Application should now be working.
+
+== Conventions
+
+The following namespace aliases are used in the content of this document:
+
+[source, clojure]
+-----
+(ns x
+  (:require
+     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
+     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
+     [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
+     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
+     [com.example.components.config :as config]
+     [com.example.components.delete-middleware :as delete]
+     [com.example.components.save-middleware :as save]
+     [com.example.components.parser :as parser]
+     [com.fulcrologic.rad.pathom :as pathom]
+     [immutant.web :as web]
+     ))
+-----
+
+The namespaces for the Plugin and the Adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
+`com.example` is the RAD Demo.
+
+== Functions
+
+The protocol is `::kv-adaptor/KeyStore` and has methods such as `::kv-adaptor/read1` and `::kv-adaptor/write1`. `read1` accepts
+an ident and returns a map where all the joins are idents. `write1` accepts those two as arguments. There are also
+plural versions of these methods: `read*` and `write*`. To avoid the inconvenience of dealing with idents you may prefer
+to use the functions `::kv-entity-read/read-tree` and `::kv-write/write-tree`. The first will fully expand the ident
+you give it by making calls to `read1` and `read*`. The second will take a tree and process it into calls to `write*`.
+
+Please see the Demo for uses of these functions, and read the doc strings for further details.
+
+== RAD Integration
+
+The Key Value RAD Plugin comes with delete and save middleware so you don't have to write your own
+Pathom mutations. It is capable of generating the 'fill in the entity attributes' Pathom resolvers.
+It injects values into the Pathom `env` that are then picked up by these resolvers.
+There is a function to start the Plugin that picks up values set in the RAD configuration.
+
+.Entry points from RAD Demo into RAD Plugin
+|===
+|Description |Demo Mount component |Function call
+
+|Generation of Pathom resolvers
+|`com.example.components.auto-resolvers/automatic-resolvers`
+|`kv-pathom/generate-resolvers`
+
+|Save Middleware
+|`save/middleware`
+|`kv-pathom/wrap-save`
+
+|Delete Middleware
+|`delete/middleware`
+|`kv-pathom/wrap-delete`
+
+|What the Pathom `env` requires
+|`parser/parser`
+|`kv-pathom/pathom-plugin`
+
+|Create connection
+|`config/config`,`com.example.components.seeded-connection/kv-connections`
+|`kv-database/start`
+|===
+
+One last area of integration not included on this table is where your hand written resolvers need to query the
+database. Here the queries will be passed the Pathom env - so they can grab the connection. With the connection
+in hand a query can call functions from the namespaces `::kv-adaptor` and `::kv-entity-read`.
+
+== Comparison with Datomic Database Plugin
+
+Compared to the Datomic Plugin some things have been left undone.
+
+Even although the Pathom `env` of this Plugin has `::key-value/connections` and `::key-value/databases` only
+one connection/database is ever used. (With this type of database there is no difference between a connection and a
+database). So with current functionality we could get away with just having `::key-value/connection`.
+The Datomic Plugin uses this to support sharding, which has been left undone for the Key Value Plugin.
+
+The Datomic Plugin looks to RAD attributes to ascertain
+
+== Queries
+
+== Redis Setup
 
 == Copyright and License
 

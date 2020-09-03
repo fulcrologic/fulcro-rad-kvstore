@@ -24,7 +24,7 @@
     schemas))
 
 (defn alter-existing-user []
-  (let [{:keys [main]} (kv-database/start-database config/config)
+  (let [{:keys [main]} (kv-database/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -61,7 +61,7 @@
 (defn add-new-user []
   (let [user-tempid (tempid/tempid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9")
         address-tempid (tempid/tempid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16")
-        {:keys [main]} (kv-database/start-database config/config)
+        {:keys [main]} (kv-database/start config/config)
         delta (new-user-delta user-tempid address-tempid)
         key->attribute (attr/attribute-map all-attributes)
         env {::attr/key->attribute   key->attribute

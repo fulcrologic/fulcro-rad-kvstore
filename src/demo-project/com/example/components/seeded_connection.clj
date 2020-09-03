@@ -84,6 +84,6 @@
 ;;
 (defstate kv-connections
   "The connection to the database that has just been freshly populated"
-  :start (let [{:keys [main] :as databases} (kv-database/start-database config/config)]
+  :start (let [{:keys [main] :as databases} (kv-database/start config/config)]
            (seed! main)
            databases))
