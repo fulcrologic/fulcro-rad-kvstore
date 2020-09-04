@@ -1,6 +1,7 @@
 (ns test.com.fulcrologic.rad.database-adapters.key-value.pathom-test
   (:require [clojure.test :refer :all]
             [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
+            [com.example.components.seeded-connection :refer [all-tables!]]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
             [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -63,6 +64,12 @@
         env {::attr/key->attribute   key->attribute
              ::key-value/connections {:production main}}
         params {::form/delta delta}
+        ;;
+        ;; Hmm - not ideal. Needed because Redis is a real database. We need to implement what the Datomic Adaptor
+        ;; has: pristine-db-connection / empty-db-connection (same thing as we no schema). So far I've always been
+        ;; going with the one database, and not even sure if Redis supports just creating databases out of thin air.
+        ;;
+        _ (kv-database/wipe main (all-tables!))
         tempids-map (kv-pathom/save-form! env params)
         user-in-tempids (get (:tempids tempids-map) user-tempid)
         address-in-tempids (get (:tempids tempids-map) address-tempid)]

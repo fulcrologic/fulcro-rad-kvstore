@@ -13,11 +13,11 @@ things as documents with keys.
 
 == Trying it Out
 
-This adaptor is in development and is not yet ready for production.
+This Adaptor is in development and is not yet ready for production.
 
-This project currently consists of two implementations of the adaptor - in memory via a Clojure atom and Redis.
+This project currently consists of two implementations of the Adaptor - in memory via a Clojure atom and Redis.
 
-A RAD Key Value Database Plugin uses the adaptor. In turn this plugin is used by a recent copy of the
+A RAD Key Value Database Plugin uses the Adaptor. In turn this Plugin is used by a recent copy of the
 https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
 
  RAD Demo -> Key Value Plugin -> Key Value Adaptor -> Redis | Firebase | MongoDB ...
@@ -30,7 +30,7 @@ server side setup a REPL choosing 'Run with Deps' with the alias `dev`. Optional
 to `-Dguardrails.enabled=true`. Bring the REPL up. `(user/refresh)` will reload the namespaces and `(user/restart)` will
 get the Demo's dependency graph of Mount components up and running.
 
-Back to the client. Bring a browser tab up at http://localhost:9630/ and start a watch on the `:main` build. When
+Back to the client. Bring up a browser tab at http://localhost:9630/ and start a watch on the `:main` build. When
 compilation is complete refresh the browser at http://localhost:3000/. The Demo Application should now be working.
 
 == Conventions
@@ -56,15 +56,17 @@ The following namespace aliases are used in the content of this document:
 -----
 
 The namespaces for the Plugin and the Adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
-`com.example` is the RAD Demo.
+The RAD Demo is at `com.example`.
 
 == Functions
 
 The protocol is `::kv-adaptor/KeyStore` and has methods such as `::kv-adaptor/read1` and `::kv-adaptor/write1`. `read1` accepts
-an ident and returns a map where all the joins are idents. `write1` accepts those two as arguments. There are also
-plural versions of these methods: `read*` and `write*`. To avoid the inconvenience of dealing with idents you may prefer
-to use the functions `::kv-entity-read/read-tree` and `::kv-write/write-tree`. The first will fully expand the ident
-you give it by making calls to `read1` and `read*`. The second will take a tree and process it into calls to `write*`.
+an ident and returns a map (entity) where all the joins are idents. `write1` accepts those two (ident, map) as arguments. There
+are also plural versions of these methods: `read*` and `write*`. To avoid the inconvenience of dealing with idents
+you may prefer to use the functions `::kv-entity-read/read-tree` and `::kv-write/write-tree`.
+`read-tree` will fully expand the ident you give it into tree form by making calls to `read1` and `read*`.
+All the joins will have become maps or vectors of maps. No idents!
+`write-tree` will do the opposite, taking a tree structure and process it by making calls to `write*`.
 
 Please see the Demo for uses of these functions, and read the doc strings for further details.
 
@@ -81,23 +83,23 @@ There is a function to start the Plugin that picks up values set in the RAD conf
 
 |Generation of Pathom resolvers
 |`com.example.components.auto-resolvers/automatic-resolvers`
-|`kv-pathom/generate-resolvers`
+|`::kv-pathom/generate-resolvers`
 
 |Save Middleware
-|`save/middleware`
-|`kv-pathom/wrap-save`
+|`::save/middleware`
+|`::kv-pathom/wrap-save`
 
 |Delete Middleware
-|`delete/middleware`
-|`kv-pathom/wrap-delete`
+|`::delete/middleware`
+|`::kv-pathom/wrap-delete`
 
 |What the Pathom `env` requires
-|`parser/parser`
-|`kv-pathom/pathom-plugin`
+|`::parser/parser`
+|`::kv-pathom/pathom-plugin`
 
 |Create connection
-|`config/config`,`com.example.components.seeded-connection/kv-connections`
-|`kv-database/start`
+|`::config/config`,`com.example.components.seeded-connection/kv-connections`
+|`::kv-database/start`
 |===
 
 One last area of integration not included on this table is where your hand written resolvers need to query the
@@ -110,14 +112,47 @@ Compared to the Datomic Plugin some things have been left undone.
 
 Even although the Pathom `env` of this Plugin has `::key-value/connections` and `::key-value/databases` only
 one connection/database is ever used. (With this type of database there is no difference between a connection and a
-database). So with current functionality we could get away with just having `::key-value/connection`.
+database). So with current functionality we could get away with just having `::key-value/database`.
 The Datomic Plugin uses this to support sharding, which has been left undone for the Key Value Plugin.
+Note that even if we switched to using `::key-value/database` in the `env`, we could still keep `::key-value/databases`
+in the config file.
 
-The Datomic Plugin looks to RAD attributes to ascertain
+There is no automatic schema generation. Unlike Datomic, Key Value databases do not have schemas to generate.
+
+Where it can this Plugins eschews looking to RAD attributes to ascertain the primary key of entities, instead making
+the assumption that your schema strictly adheres to each entity having one '/id' attribute. Thus if you do not need
+automatic Pathom resolver generation then this Plugin can be used outside of RAD. You just need to take over the
+creation of the Adaptor (rather than calling `::kv-database/start`):
+
+  (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri "redis://127.0.0.1:6379/"}} options)
+
+There's probably more but the last significant thing that this Plugin lacks is the useful function
+`::datomic/empty-db-connection` that gives a data-less database - used for making tests that build up
+just the data they need.
 
 == Queries
 
-== Redis Setup
+Key Value databases are all about storing information at a location and retrieving it back again. There is no
+concept of tables or retrieving data from them according to some predicate logic. Despite this, and merely to
+get the Demo working, a method called `::kv-adaptor/read-table` was introduced to this library. You will need to
+set `:key-value/table-kludge?` to true in order to get `read-table` to work. This is an option to the creation of
+any `::kv-adaptor/KeyStore`, set when using RAD via the .edn configuration files.
+
+We just show a couple of example queries from the Demo. All queries are called from custom Pathom resolvers.
+
+ (let [read-tree (kv-entity-read/read-tree-hof db env)]
+      (->> (kv-adaptor/read-table db env :account/id)
+           (map read-tree)
+           (filter :account/active?)))
+
+ (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
+     :invoice/customer
+     second)
+
+== Redis Installation
+
+These instructions worked well for me (on a Linux machine):
+https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-redis-on-ubuntu-18-04
 
 == Copyright and License
 

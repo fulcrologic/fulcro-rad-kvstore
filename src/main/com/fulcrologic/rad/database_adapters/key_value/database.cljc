@@ -3,6 +3,7 @@
   (:require
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]))
@@ -34,8 +35,14 @@
 (>defn export
   "Sometimes useful to see the whole database at once"
   [db env tables]
-  [::kv-adaptor/key-store map? ::tables => vector?]
+  [::kv-adaptor/key-store map? ::key-value/tables => vector?]
   (into {} (for [table tables]
              (let [entities (->> (kv-adaptor/read-table db env table)
                                  (mapv (partial kv-adaptor/read1 db env)))]
                [table entities]))))
+
+(>defn wipe
+  [db tables]
+  [::kv-adaptor/key-store ::key-value/tables => any?]
+  (doseq [table tables]
+    (kv-write/remove-table-rows! db {} table)))

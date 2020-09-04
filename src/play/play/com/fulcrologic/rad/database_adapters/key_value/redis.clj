@@ -42,29 +42,29 @@
 ;;
 ;; Test out any new adaptor like this...
 ;;
-(def m {:some-table/id       5
+(def m {:some-table/id       (new-uuid 5)
         :some-table/greeting "Hallo Sailor"})
 
-(def adaptor (redis-adaptor/->RedisKeyStore server1-conn true))
+(def adaptor (delay (redis-adaptor/->RedisKeyStore server1-conn true)))
 
 (defn test-specs []
-  (kv-adaptor/key-store? adaptor))
+  (kv-adaptor/key-store? @adaptor))
 
 ;;
 ;; Doesn't work so simplify
 ;;
 (defn write-first []
-  (kv-write/write-tree adaptor pathom-env m))
+  (kv-write/write-tree @adaptor pathom-env m))
 
 ;; Works like this
 (defn write-simply []
   (car/wcar server1-conn (car/set (kv-write/entity->ident m) m)))
 
 (defn then-read-from-outer []
-  (dev/log-on "reading the row" (kv-entity-read/read-tree adaptor pathom-env (kv-write/entity->ident m))))
+  (dev/log-on "reading the row with read-tree" (kv-entity-read/read-tree @adaptor pathom-env (kv-write/entity->ident m))))
 
 (defn then-read-from-inner []
-  (dev/log-on "reading the row" (dev/pp-str (kv-adaptor/read1 adaptor pathom-env (kv-write/entity->ident m)))))
+  (dev/log-on "reading the row with read1" (dev/pp-str (kv-adaptor/read1 @adaptor pathom-env (kv-write/entity->ident m)))))
 
 ;;
 ;; Needed to remove duplicates

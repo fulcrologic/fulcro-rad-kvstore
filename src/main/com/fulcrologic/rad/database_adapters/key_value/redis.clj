@@ -7,7 +7,8 @@
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [taoensso.carmine :as car]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [clojure.spec.alpha :as s]))
 
 ;;
 ;; T
@@ -30,8 +31,8 @@
 (>defn upsert-new-value!
   "Read the old value and merge over it with the new. If `table-kludge?` is on then the list of all row ids for that table
   is updated. We do this even if it is an existing row that is being changed"
-  [conn table-kludge? [table id :as ident] m]
-  [map? boolean? ::key-value/ident map? => any?]
+  [conn {:key-value/keys [table-kludge?]} [table id :as ident] m]
+  [map? map? ::key-value/ident map? => any?]
   (let [last-value (or (car/wcar conn (car/get ident)) {})]
     (car/wcar conn (car/set ident (merge last-value m)))
     (when table-kludge?
@@ -41,28 +42,38 @@
                        #{id})]
         (car/wcar conn (car/set table to-store))))))
 
-(defn remove-row
+(>defn remove-row!
   "Just set the ident to nil. Remove from row-ids of that table when `:key-value/table-kludge?` is on"
-  [conn table-kludge? [table id :as ident]]
+  [conn {:key-value/keys [table-kludge?]} [table id :as ident]]
+  [map? map? ::key-value/ident => any?]
   (car/wcar conn (car/set ident nil))
   (when table-kludge?
     (let [row-ids (car/wcar conn (car/get table))
           to-store (disj row-ids id)]
       (car/wcar conn (car/set table to-store)))))
 
-(defn- feed-pair! [conn table-kludge? pair]
+(>defn read-table
+  [conn {:key-value/keys [table-kludge?]} table]
+  [map? map? ::key-value/id-keyword => (s/coll-of ::key-value/ident :kind vector?)]
+  (cond
+    (not table-kludge?)
+    (do
+      (log/error "table" table "cannot be queried with `:key-value/table-kludge?` set to" table-kludge?)
+      [])
+    :else (mapv (fn [id] [table id]) (car/wcar conn (car/get table)))))
+
+(defn- feed-pair! [conn options pair]
   (let [[ident m] (if (map? pair)
                     (first pair)
                     pair)]
-    (upsert-new-value! conn table-kludge? ident m)))
+    (upsert-new-value! conn options ident m)))
 
-(defn- write!
-  [conn {:key-value/keys [table-kludge?]} pairs-of-ident-map]
+(defn- write! [conn options pairs-of-ident-map]
   (let [entries (cond
                   ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
                   (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
     (doseq [entry entries]
-      (feed-pair! conn table-kludge? entry))))
+      (feed-pair! conn options entry))))
 
 (deftype RedisKeyStore [conn options] kv-adaptor/KeyStore
   (-read1 [this env ident]
@@ -70,17 +81,13 @@
   (-read* [this env idents]
     (car/wcar conn (mapv (fn [ident] (car/get ident)) idents)))
   (-read-table [this env table]
-    (if (not (:key-value/table-kludge? options))
-      (do
-        (log/error "table" table "cannot be queried with `:key-value/table-kludge?` set to" (:key-value/table-kludge? options))
-        [])
-      (mapv (fn [id] [table id]) (car/wcar conn (car/get table)))))
+    (read-table conn options table))
   (-write* [this env pairs-of-ident-map]
     (write! conn options pairs-of-ident-map))
   (-write1 [this env ident m]
     (write! conn options [[ident m]]))
   (-remove1 [this env ident]
-    (remove-row conn (:key-value/table-kludge? options) ident))
+    (remove-row! conn options ident))
   (-instance-name [this]
     (-> conn :spec :uri))
   (-options [this]
