@@ -17,7 +17,7 @@
              (map read-tree)
              (filter :account/active?)
              (mapv #(select-keys % [:account/id])))))
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-all-items
   [env {:category/keys [id]}]
@@ -30,7 +30,7 @@
              (mapv #(select-keys % [:item/id])))
         (->> (kv-adaptor/read-table db env :item/id)
              (mapv (fn [[table id]] {table id})))))
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-customer-invoices [env {:account/keys [id]}]
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
@@ -39,14 +39,14 @@
            (map read-tree)
            (filter #(= id (-> % :invoice/customer :account/id)))
            (mapv #(select-keys % [:invoice/id]))))
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-all-invoices
   [env query-params]
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
     (->> (kv-adaptor/read-table db env :invoice/id)
          (mapv (fn [[table id]] {table id})))
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-invoice-customer-id
   [env invoice-id]
@@ -54,14 +54,14 @@
     (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
         :invoice/customer
         second)
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-all-categories
   [env query-params]
   (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
     (->> (kv-adaptor/read-table db env :category/id)
          (mapv (fn [[table id]] {table id})))
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-line-item-category
   [env line-item-id]
@@ -69,7 +69,7 @@
     (let [i-id (-> (kv-adaptor/read1 db env [:line-item/id line-item-id]) :line-item/item second)
           c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]
       c-id)
-    (throw (ex-info "No database atom for production schema!" {:env (keys env)}))))
+    (log/error "No database atom for production schema!")))
 
 (defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."

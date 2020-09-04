@@ -11,34 +11,13 @@
             [clojure.walk :as walk]
             [taoensso.timbre :as log]))
 
-;;
-;; TODO (This is a 'done' but leaving b/c questions answered, please wipe after read!)
-;; T
-;; Assertions give a pretty bad experience IMO, because sometimes you get the assertion wrong and I'd rather is not
-;; crash.
-;; Why is `value` even names here when the function does not use it?
-;;
-;; C
-;; Assertions are supposed to be development only?? So it shouldn't matter so much if you get the assertion wrong.
-;; However (doing some research) it doesn't seem clear (or widely used) how to turn them off! Thus the spec version of
-;; assert should be preferred.
-;;
-;; An 'always on' assert would be a `throw`. I've now changed a few assertions to throws. There are no more asserts
-;; in this code.
-;;
-;; `value` doesn't need to be there. The signatures of these two functions just need to be the same because of how
-;; they are used. I do care that the types are correct, even though they are selectively ignored. They are
-;; being used to compose the seeded data. `ident-of` and `value-of` are interchangeable. So the requirement is that
-;; they have the same signature.
-;;
-
 (>defn ident-of
   "Used when composing data to be stored. When a join is a reference (this function returns an ident reference) you
   are indicating that elsewhere the referred to entity is being included in its entirety. No need to repeat information.
   It is expected that the use of `ident-of` is interchanged with the use of `value-of` as the data composition changes.
   See com.example.components.seeded-connection/seed!"
   [[table id value]]
-  [::key-value/table-id-entity => ::key-value/ident]
+  [::key-value/table-id-entity-3-tuple => ::key-value/ident]
   [table id])
 
 (>defn value-of
@@ -47,7 +26,7 @@
   It is expected that the use of `value-of` is interchanged with the use of `ident-of` as the data composition changes.
   See com.example.components.seeded-connection/seed!"
   [[table id value]]
-  [::key-value/table-id-entity => map?]
+  [::key-value/table-id-entity-3-tuple => map?]
   value)
 
 (defn id-attribute-f
@@ -115,11 +94,12 @@
   ([m id-attribute]
    [map? (? qualified-keyword?) => map?]
    (let [id-attribute (or id-attribute (id-attribute-f m))]
-     (when (nil? id-attribute)
+     (if (nil? id-attribute)
        ;; We want to be /id by RAD config but have not yet done.
-       (throw (ex-info "Every value/map stored in the Key Value DB must have an /id attribute (current implementation limitation)"
-                       {:keys (keys m)})))
-     {id-attribute (get m id-attribute)}))
+       (do
+         (log/error "Every value/map stored in the Key Value DB must have an /id attribute (current implementation limitation), else provide one to `::kv-write/entity->eql-result`")
+         {})
+       {id-attribute (get m id-attribute)})))
   ([m]
    [map? => map?]
    (entity->eql-result m nil)))
@@ -207,7 +187,7 @@
 (>defn remove-table-rows!
   "Given a table find out all its rows and remove them"
   [ks env table]
-  [::kv-adaptor/key-store map? ::key-value/id-keyword => any?]
+  [::kv-adaptor/key-store map? ::key-value/table => any?]
   (let [idents (kv-adaptor/read-table ks env table)]
     (doseq [ident idents]
       (kv-adaptor/remove1 ks env ident))))

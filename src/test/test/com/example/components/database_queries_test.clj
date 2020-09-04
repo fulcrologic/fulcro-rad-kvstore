@@ -2,11 +2,11 @@
   (:require
     [clojure.test :refer :all]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.components.database-queries :as queries]
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [mount.core :as mount]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]))
+    [mount.core :as mount]))
 
 (deftest always-passes
   (let [amount 1000]
@@ -16,6 +16,12 @@
   (mount/start)
   (let [conn (:main kv-connections)]
     {::key-value/databases {:production (atom conn)}}))
+
+;; To prefer failures to errors when testing with kludge off
+(defn my-rand-nth [xs]
+  (if (empty? xs)
+    nil
+    (rand-nth xs)))
 
 ;;
 ;; range includes the first but not the last
@@ -58,14 +64,14 @@
 (deftest customer-on-an-invoice
   (let [env (env)
         conn (:main kv-connections)
-        iident (rand-nth (kv-adaptor/read-table conn {} :invoice/id))
+        iident (my-rand-nth (kv-adaptor/read-table conn {} :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
         conn (:main kv-connections)
-        li-ident (rand-nth (kv-adaptor/read-table conn {} :line-item/id))
+        li-ident (my-rand-nth (kv-adaptor/read-table conn {} :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 

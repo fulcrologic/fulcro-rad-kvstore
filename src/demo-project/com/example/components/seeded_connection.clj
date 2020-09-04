@@ -71,9 +71,7 @@
   [::kv-adaptor/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
   (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name connection))
-  (kv-database/wipe connection (all-tables!))
-  (doseq [[table id value] (all-entities!)]
-    (kv-write/write-tree connection {} value)))
+  (kv-database/destructive-reset connection (all-tables!) (all-entities!)))
 
 ;;
 ;; We've got a tiny database so let's seed it every time we refresh

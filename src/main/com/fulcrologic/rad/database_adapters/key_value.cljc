@@ -6,12 +6,14 @@
 
 (s/def ::id-keyword id-keyword?)
 
+(s/def ::table id-keyword?)
+
 (s/def ::ident-like-map (every-pred map?
                                     #(= 1 (count %))
                                     #(-> % first key id-keyword?)
                                     #(-> % first val uuid?)))
 
-(s/def ::ident (s/tuple ::id-keyword uuid?))
+(s/def ::ident (s/tuple ::table uuid?))
 
 (s/def ::idents (s/coll-of ::ident :kind vector?))
 
@@ -19,11 +21,11 @@
 
 (s/def ::pairs-of-ident-map (s/coll-of ::pair))
 
-(s/def ::tables (s/coll-of ::id-keyword :kind vector?))
+(s/def ::tables (s/coll-of ::table :kind vector?))
 
-(s/def ::table-id-entity (s/tuple ::id-keyword uuid? map?))
+(s/def ::table-id-entity-3-tuple (s/tuple ::table uuid? map?))
 
 (s/def ::ident-s-or-table (s/or :ident ::ident
                                 :idents ::idents
-                                :table ::id-keyword))
+                                :table ::table))
 

@@ -16,9 +16,10 @@
 
 (defn env [] {})
 
+(defn conn [] (:main kv-connections))
+
 (defn read-from-connection []
-  (let [conn (:main kv-connections)]
-    (dev/pp (kv-pathom/read-compact conn (env) [:account/id #uuid "ffffffff-ffff-ffff-ffff-000000000100"]))))
+  (dev/pp (kv-pathom/read-compact (conn) (env) [:account/id #uuid "ffffffff-ffff-ffff-ffff-000000000100"])))
 
 (defn env-before-use-parser []
   (let [env {:parser               parser/parser
@@ -63,48 +64,44 @@
          dev/pp)))
 
 (defn view-current-connection []
-  (let [db (:main kv-connections)]
-    (kv-adaptor/instance-name db)))
+  (kv-adaptor/instance-name (conn)))
 
 (defn entire-db []
-  (let [db (:main kv-connections)
-        env (env)]
-    (dev/pp (kv-database/export db env (all-tables!)))))
+  (dev/pp (kv-database/export (conn) (env) (all-tables!))))
 
 (defn test-remove-all []
-  (let [db (:main kv-connections)]
-    (kv-write/remove-table-rows! db (env) :account/id)))
+  (kv-write/remove-table-rows! (conn) (env) :account/id))
 
 (defn wipe-database []
-  (let [db (:main kv-connections)]
+  (let [db (conn)]
     (doseq [table (all-tables!)]
       (kv-write/remove-table-rows! db (env) table))))
 
 (defn all-anything [table]
-  (let [db (:main kv-connections)
+  (let [db (conn)
         read-tree (kv-entity-read/read-tree-hof db (env))]
     (->> (kv-adaptor/read-table db (env) table)
          (mapv read-tree)
          dev/pp)))
 
 (defn all-addresses []
-  (all-anything :address/id))
+  (kv-database/all (conn) (env) :address/id))
 
 (defn all-line-items []
-  (all-anything :line-item/id))
+  (kv-database/all (conn) (env) :line-item/id))
 
 (defn all-accounts []
-  (all-anything :account/id))
+  (dev/pp (kv-database/all (conn) (env) :account/id)))
 
 (defn every-line-item-expanded []
-  (let [db (:main kv-connections)
+  (let [db (conn)
         read-tree (kv-entity-read/read-tree-hof db (env))]
     (->> (kv-adaptor/read-table db (env) :line-item/id)
          (mapv read-tree)
          dev/pp)))
 
 (defn all-item-ids-where-cat-id []
-  (let [db (:main kv-connections)
+  (let [db (conn)
         read-tree (kv-entity-read/read-tree-hof db (env))
         toys-cat-id (new-uuid 1002)]
     (->> (kv-adaptor/read-table db (env) :item/id)
@@ -120,7 +117,7 @@
 ;       [?c :account/id ?cid]] db id)
 (defn all-invoices-of-an-account []
   (let [cid (new-uuid 103)
-        db (:main kv-connections)
+        db (conn)
         read-tree (kv-entity-read/read-tree-hof db (env))]
     (->> (kv-adaptor/read-table db (env) :invoice/id)
          (map read-tree)
@@ -135,15 +132,29 @@
 ;       [?c :account/id ?account-uuid]] db invoice-id)
 
 (defn given-invoice-get-customer []
-  (let [db (:main kv-connections)
+  (let [db (conn)
         env (env)]
     (->> (rand-nth (kv-adaptor/read-table db env :invoice/id))
          (kv-adaptor/read1 db env))))
 
 (defn given-line-item-get-category []
   (let [env (env)
-        db (:main kv-connections)
+        db (conn)
         li-ident (rand-nth (kv-adaptor/read-table db env :line-item/id))
         i-id (-> (kv-adaptor/read1 db env li-ident) :line-item/item second)
         c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]
     c-id))
+
+(defn alter-test []
+  (let [env (env)
+        db (conn)
+        active-accounts-1 (->> (kv-database/all db env :account/id)
+                               (filter :account/active?))
+        altered-account (assoc (rand-nth active-accounts-1) :account/active? false)
+        num-active-1 (count active-accounts-1)]
+    (kv-adaptor/write1 db env (kv-write/entity->ident altered-account) altered-account)
+    (let [active-accounts-2 (->> (kv-database/all db env :account/id)
+                                 (filter :account/active?))
+          num-active-2 (count active-accounts-2)]
+      [num-active-1 num-active-2])))
+

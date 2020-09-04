@@ -4,9 +4,12 @@
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
+    [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
-    [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]))
+    [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
+    [clojure.spec.alpha :as s]
+    [taoensso.timbre :as log]))
 
 (>defn start
   "Returns a map containing only one database - the `:main` one.
@@ -41,8 +44,25 @@
                                  (mapv (partial kv-adaptor/read1 db env)))]
                [table entities]))))
 
-(>defn wipe
-  [db tables]
-  [::kv-adaptor/key-store ::key-value/tables => any?]
-  (doseq [table tables]
-    (kv-write/remove-table-rows! db {} table)))
+(>defn destructive-reset
+  "Remove the row data for given tables, then write new entities. Usually the new entities are for corresponding tables,
+  however they don't have to be"
+  ([db tables entities]
+   [::kv-adaptor/key-store ::key-value/tables (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
+   (doseq [table tables]
+     (kv-write/remove-table-rows! db {} table))
+   (when entities
+     (doseq [[table id value] entities]
+       (kv-write/write-tree db {} value)))
+   (log/info "Destructively reset" (count tables) "tables, replacing with data from" (count entities)))
+  ([db tables]
+   [::kv-adaptor/key-store ::key-value/tables => any?]
+   (destructive-reset db tables [])))
+
+(>defn all
+  "Return all entities for a table"
+  [db env table]
+  [::kv-adaptor/key-store map? ::key-value/table => (s/coll-of map? :kind vector?)]
+  (let [read-tree (kv-entity-read/read-tree-hof db env)]
+    (->> (kv-adaptor/read-table db env table)
+         (mapv read-tree))))

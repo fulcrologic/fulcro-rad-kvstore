@@ -54,7 +54,7 @@
 
 (>defn read-table
   [conn {:key-value/keys [table-kludge?]} table]
-  [map? map? ::key-value/id-keyword => (s/coll-of ::key-value/ident :kind vector?)]
+  [map? map? ::key-value/table => (s/coll-of ::key-value/ident :kind vector?)]
   (cond
     (not table-kludge?)
     (do

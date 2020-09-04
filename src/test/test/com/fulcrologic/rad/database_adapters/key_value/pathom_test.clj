@@ -1,7 +1,7 @@
 (ns test.com.fulcrologic.rad.database-adapters.key-value.pathom-test
   (:require [clojure.test :refer :all]
             [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
-            [com.example.components.seeded-connection :refer [all-tables!]]
+            [com.example.components.seeded-connection :refer [all-tables! all-entities!]]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
             [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -34,7 +34,8 @@
           tempids-map (kv-pathom/save-form! env params)
           retired-erick (kv-adaptor/read1 main env [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
-      (is (false? (:account/active? retired-erick))))))
+      (is (false? (:account/active? retired-erick))))
+    (kv-database/destructive-reset main (all-tables!) (all-entities!))))
 
 (defn new-user-delta [user-tempid address-tempid email-address]
   {[:account/id user-tempid]
@@ -63,14 +64,14 @@
         key->attribute (attr/attribute-map all-attributes)
         env {::attr/key->attribute   key->attribute
              ::key-value/connections {:production main}}
-        params {::form/delta delta}
         ;;
         ;; Hmm - not ideal. Needed because Redis is a real database. We need to implement what the Datomic Adaptor
         ;; has: pristine-db-connection / empty-db-connection (same thing as we no schema). So far I've always been
-        ;; going with the one database, and not even sure if Redis supports just creating databases out of thin air.
+        ;; going with the one database, and not even sure if Redis supports just creating databases out of thin air
+        ;; the way Datomic can
         ;;
-        _ (kv-database/wipe main (all-tables!))
-        tempids-map (kv-pathom/save-form! env params)
+        _ (kv-database/destructive-reset main (all-tables!))
+        tempids-map (kv-pathom/save-form! env {::form/delta delta})
         user-in-tempids (get (:tempids tempids-map) user-tempid)
         address-in-tempids (get (:tempids tempids-map) address-tempid)]
     (is user-in-tempids)
@@ -81,4 +82,5 @@
                           (kv-entity-read/read-tree main env)
                           :account/email)]
       (is (= user-email email))
-      (is (= 1 (-> (kv-adaptor/read-table main env :address/id) count))))))
+      (is (= 1 (-> (kv-adaptor/read-table main env :address/id) count))))
+    (kv-database/destructive-reset main (all-tables!) (all-entities!))))

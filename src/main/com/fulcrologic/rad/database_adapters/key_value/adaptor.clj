@@ -73,7 +73,7 @@
         :invoice/customer
         second)"
   [this env ident]
-  [::key-store map? ::key-value/ident => map?]
+  [::key-store map? ::key-value/ident => (? map?)]
   (-read1 this env ident))
 
 (>defn read-table
@@ -95,10 +95,10 @@
 
   This operation is not what Key Value stores are meant for. If you have not set `:key-value/table-kludge?` to
   true then this operation will not be supported (`MemoryKeyStore` excepted). Efficient querying is database vendor
-  specific. This function is meant for quick demos. Turn off `:key-value/table-kludge?` for anything else
-  and use the vendor specific recommendations/functionality to query."
+  specific. This function is meant for quick demos. Turn off `:key-value/table-kludge?` for anything serious.
+  There are product specific recommendations/functionality for running queries, if that's what you need to do"
   [this env table]
-  [::key-store map? ::key-value/id-keyword => (s/coll-of ::key-value/ident :kind vector?)]
+  [::key-store map? ::key-value/table => (s/coll-of ::key-value/ident :kind vector?)]
   (-read-table this env table))
 
 (>defn write*

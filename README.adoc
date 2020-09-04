@@ -8,19 +8,19 @@
 
 image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-rad-kvstore.svg[link=https://clojars.org/com.fulcrologic/fulcro-rad-kvstore]
 
-A Fulcro RAD plugin that provides an interface for building database adapters to support databases that generally store
+A Fulcro RAD plugin that provides an interface for building database adaptors to support databases that generally store
 things as documents with keys.
 
 == Trying it Out
 
-This Adaptor is in development and is not yet ready for production.
+This Fulcro RAD plugin with adaptors is in development and is not yet ready for production.
 
-This project currently consists of two implementations of the Adaptor - in memory via a Clojure atom and Redis.
+This project currently consists of two implementations of the Key Value adaptor - in memory via a Clojure atom and Redis.
 
-A RAD Key Value Database Plugin uses the Adaptor. In turn this Plugin is used by a recent copy of the
+A RAD Key Value Database plugin uses the adaptor. In turn this plugin is used by a recent copy of the
 https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
 
- RAD Demo -> Key Value Plugin -> Key Value Adaptor -> Redis | Firebase | MongoDB ...
+ RAD Demo -> Key Value plugin -> Key Value adaptor -> Redis | Firebase | MongoDB ...
 
 Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database is
 `:clojure-atom`. We don't want to have to install Redis just yet.
@@ -55,7 +55,7 @@ The following namespace aliases are used in the content of this document:
      ))
 -----
 
-The namespaces for the Plugin and the Adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
+The namespaces for the plugin and the adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
 The RAD Demo is at `com.example`.
 
 == Functions
@@ -72,12 +72,12 @@ Please see the Demo for uses of these functions, and read the doc strings for fu
 
 == RAD Integration
 
-The Key Value RAD Plugin comes with delete and save middleware so you don't have to write your own
+The Key Value RAD plugin comes with delete and save middleware so you don't have to write your own
 Pathom mutations. It is capable of generating the 'fill in the entity attributes' Pathom resolvers.
 It injects values into the Pathom `env` that are then picked up by these resolvers.
-There is a function to start the Plugin that picks up values set in the RAD configuration.
+There is a function to start the plugin that picks up values set in the RAD configuration.
 
-.Entry points from RAD Demo into RAD Plugin
+.Entry points from RAD Demo into RAD plugin
 |===
 |Description |Demo Mount component |Function call
 
@@ -106,29 +106,30 @@ One last area of integration not included on this table is where your hand writt
 database. Here the queries will be passed the Pathom env - so they can grab the connection. With the connection
 in hand a query can call functions from the namespaces `::kv-adaptor` and `::kv-entity-read`.
 
-== Comparison with Datomic Database Plugin
+== Comparison with Datomic Database plugin
 
-Compared to the Datomic Plugin some things have been left undone.
+Compared to the Datomic plugin some things have been left undone.
 
-Even although the Pathom `env` of this Plugin has `::key-value/connections` and `::key-value/databases` only
+Even although the Pathom `env` of this plugin has `::key-value/connections` and `::key-value/databases` only
 one connection/database is ever used. (With this type of database there is no difference between a connection and a
 database). So with current functionality we could get away with just having `::key-value/database`.
-The Datomic Plugin uses this to support sharding, which has been left undone for the Key Value Plugin.
+The Datomic plugin uses this to support sharding, which has been left undone for the Key Value plugin.
 Note that even if we switched to using `::key-value/database` in the `env`, we could still keep `::key-value/databases`
 in the config file.
 
 There is no automatic schema generation. Unlike Datomic, Key Value databases do not have schemas to generate.
 
-Where it can this Plugins eschews looking to RAD attributes to ascertain the primary key of entities, instead making
-the assumption that your schema strictly adheres to each entity having one '/id' attribute. Thus if you do not need
-automatic Pathom resolver generation then this Plugin can be used outside of RAD. You just need to take over the
-creation of the Adaptor (rather than calling `::kv-database/start`):
+This plugin currently eschews looking to RAD attributes to ascertain the primary key of entities, instead making
+the assumption that your schema strictly adheres to each entity instance having one '/id' attribute. Thus if you do not need
+automatic Pathom resolver generation then this plugin can be used outside of RAD. You just need to take over the
+creation of the adaptor (rather than calling `::kv-database/start`):
 
   (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri "redis://127.0.0.1:6379/"}} options)
 
-There's probably more but the last significant thing that this Plugin lacks is the useful function
+The last significant thing this plugin lacks is the useful function
 `::datomic/empty-db-connection` that gives a data-less database - used for making tests that build up
-just the data they need.
+just the data they need, not touching already existing databases. The closest we have is
+`::kv-database/destructive-reset` which requires an existing database and destroys all its data.
 
 == Queries
 
