@@ -1,5 +1,5 @@
-(ns com.fulcrologic.rad.database-adapters.key-value.memory
-  "A reference implementation of `::kv-adaptor/KeyStore` that uses a Clojure atom as the database"
+(ns com.fulcrologic.rad.database-adapters.key-value.konserve
+  ""
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -23,29 +23,24 @@
                   ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
                   (map? pairs-of-ident-map) (into [] pairs-of-ident-map)))))))
 
-(defn table-idents
-  "We preference read-tree by always returning idents"
-  [m table]
-  (->> m
-       keys
-       (filterv #(= table (first %)))))
-
-(deftype MemoryKeyStore [keystore-name a options] kv-adaptor/KeyStore
+(deftype KonserveKeyStore [keystore-name a options] kv-adaptor/KeyStore
   (-read* [this env idents]
-    (mapv (fn [ident] (get @a ident)) idents))
+    (throw (ex-info "Can't do -read*" {:idents idents})))
   (-read1 [this env ident]
-    (get @a ident))
+    (throw (ex-info "Can't do -read1" {:ident ident})))
   (-read-table [this env table]
-    (table-idents @a table))
+    (throw (ex-info "Can't do -read-table" {:table table})))
   (-write* [this env pairs-of-ident-map]
-    (write! a pairs-of-ident-map))
+    ;(write! a pairs-of-ident-map)
+    (throw (ex-info "Can't do -write*" {:pairs-of-ident-map pairs-of-ident-map}))
+    )
   (-write1 [this env ident m]
-    (write! a [[ident m]]))
+    (throw (ex-info "Can't do -write1" {:ident ident})))
   (-remove1 [this env ident]
-    (swap! a dissoc ident))
+    (throw (ex-info "Can't do -remove1" {:ident ident})))
   (-instance-name [this]
     keystore-name)
   (-options [this]
     options)
   (-store [this]
-    (throw (ex-info "Can't do -store" {}))))
+    a))

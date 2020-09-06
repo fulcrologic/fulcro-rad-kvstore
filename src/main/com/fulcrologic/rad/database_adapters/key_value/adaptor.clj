@@ -48,7 +48,8 @@
   (-write1 [this env ident m])
   (-remove1 [this env ident])
   (-instance-name [this])
-  (-options [this]))
+  (-options [this])
+  (-store [this]))
 
 (defn key-store? [x]
   (satisfies? KeyStore x))
@@ -130,3 +131,9 @@
   [this]
   [::key-store => map?]
   (-options this))
+
+(>defn store
+  "Options (all boolean so far) that were set at the time of `KeyStore` creation"
+  [this]
+  [::key-store => any?]
+  (-store this))

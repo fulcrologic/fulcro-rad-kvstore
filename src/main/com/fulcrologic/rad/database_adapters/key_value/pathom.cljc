@@ -15,6 +15,8 @@
             [edn-query-language.core :as eql]
             [clojure.spec.alpha :as s]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
+            [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
+            [com.example.components.database-queries :as queries]
             [taoensso.timbre :as log]))
 
 (defn pathom-plugin
@@ -198,14 +200,15 @@
      (delete-entity! pathom-env params))))
 
 (>defn idents->value-hof
-  "reference is an ident or a vector of idents, or a scalar (in which case not a reference)"
-  [ks env]
-  [::kv-adaptor/key-store map? => fn?]
+  "reference is an ident or a vector of idents, or a scalar (in which case not a reference). Does not do any database
+  reading, just changes [table id] to {table id}"
+  [env]
+  [map? => fn?]
   (fn [reference]
     (cond
       (eql/ident? reference) (let [[table id] reference]
                                {table id})
-      (vector? reference) (let [recurse-f (idents->value-hof ks env)]
+      (vector? reference) (let [recurse-f (idents->value-hof env)]
                             (mapv recurse-f reference))
       :else reference)))
 
@@ -220,7 +223,7 @@
                      (do
                        (log/warn "`::kv-pathom/read-compact` nil value in database for attribute" k)
                        [k v])
-                     [k ((idents->value-hof ks env) v)])))
+                     [k ((idents->value-hof env) v)])))
             entity))))
 
 (defn entity-query
@@ -232,21 +235,22 @@
    input]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))
-        db (some-> (get-in env [::key-value/databases schema]) deref)]
-    (if-not (satisfies? kv-adaptor/KeyStore db)
-      (throw (ex-info "db is not a KeyStore" {:schema    schema
-                                              :db        db
-                                              :databases (keys (get env ::key-value/databases))}))
-      (let [ids (if one?
-                  [(get input qualified-key)]
-                  (into [] (keep #(get % qualified-key)) input))
-            idents (mapv (fn [id]
-                           [qualified-key (unwrap-id env qualified-key id)])
-                         ids)]
-        (let [result (mapv #(read-compact db env %) idents)]
-          (if one?
-            (first result)
-            result))))))
+        [env db kind :as context] (queries/context env)]
+    (let [read-compact (if (= kind :konserve)
+                         pathom-k/read-compact
+                         read-compact)
+          ids (if one?
+                [(get input qualified-key)]
+                (into [] (keep #(get % qualified-key)) input))
+          idents (mapv (fn [id]
+                         [qualified-key (unwrap-id env qualified-key id)])
+                       ids)]
+      (when (= kind :konserve)
+        (log/warn "Can improve by putting this in a go-loop (and won't need read-compact at all)"))
+      (let [result (mapv #(read-compact db env %) idents)]
+        (if one?
+          (first result)
+          result)))))
 
 (defn first-identity-hof [k->a]
   (fn [ast-nodes]

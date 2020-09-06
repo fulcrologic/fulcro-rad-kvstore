@@ -65,8 +65,8 @@ an ident and returns a map (entity) where all the joins are idents. `write1` acc
 are also plural versions of these methods: `read*` and `write*`. To avoid the inconvenience of dealing with idents
 you may prefer to use the functions `::kv-entity-read/read-tree` and `::kv-write/write-tree`.
 `read-tree` will fully expand the ident you give it into tree form by making calls to `read1` and `read*`.
-All the joins will have become maps or vectors of maps. No idents!
-`write-tree` will do the opposite, taking a tree structure and process it by making calls to `write*`.
+All the joins will have become maps or vectors of maps - so no idents.
+`write-tree` will do the opposite, deconstructing a tree structure and calling `write*`.
 
 Please see the Demo for uses of these functions, and read the doc strings for further details.
 
@@ -103,7 +103,7 @@ There is a function to start the plugin that picks up values set in the RAD conf
 |===
 
 One last area of integration not included on this table is where your hand written resolvers need to query the
-database. Here the queries will be passed the Pathom env - so they can grab the connection. With the connection
+database. Here the queries will be passed the Pathom `env` - so they can grab the connection. With the connection
 in hand a query can call functions from the namespaces `::kv-adaptor` and `::kv-entity-read`.
 
 == Comparison with Datomic Database plugin
@@ -113,7 +113,7 @@ Compared to the Datomic plugin some things have been left undone.
 Even although the Pathom `env` of this plugin has `::key-value/connections` and `::key-value/databases` only
 one connection/database is ever used. (With this type of database there is no difference between a connection and a
 database). So with current functionality we could get away with just having `::key-value/database`.
-The Datomic plugin uses this to support sharding, which has been left undone for the Key Value plugin.
+The Datomic plugin requires this setup to support sharding, which has been left undone for the Key Value plugin.
 Note that even if we switched to using `::key-value/database` in the `env`, we could still keep `::key-value/databases`
 in the config file.
 
@@ -127,16 +127,16 @@ creation of the adaptor (rather than calling `::kv-database/start`):
   (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri "redis://127.0.0.1:6379/"}} options)
 
 The last significant thing this plugin lacks is the useful function
-`::datomic/empty-db-connection` that gives a data-less database - used for making tests that build up
-just the data they need, not touching already existing databases. The closest we have is
-`::kv-database/destructive-reset` which requires an existing database and destroys all its data.
+`::datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
+just the data they need, not touching existing databases. The closest we have is
+`::kv-database/destructive-reset` which requires an existing database and destroys data.
 
 == Queries
 
 Key Value databases are all about storing information at a location and retrieving it back again. There is no
 concept of tables or retrieving data from them according to some predicate logic. Despite this, and merely to
-get the Demo working, a method called `::kv-adaptor/read-table` was introduced to this library. You will need to
-set `:key-value/table-kludge?` to true in order to get `read-table` to work. This is an option to the creation of
+get the Demo working, a method called `::kv-adaptor/read-table` is part of this adaptor. You will need to
+set `:key-value/table-kludge?` to true in order to get it to work. This is an option to the creation of
 any `::kv-adaptor/KeyStore`, set when using RAD via the .edn configuration files.
 
 We just show a couple of example queries from the Demo. All queries are called from custom Pathom resolvers.
@@ -154,6 +154,14 @@ We just show a couple of example queries from the Demo. All queries are called f
 
 These instructions worked well for me (on a Linux machine):
 https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-redis-on-ubuntu-18-04
+
+== Updating Demo project
+
+Apart from `com.example.components` and `config`, overwrite all with new files. So `com.example`: `client.cljs`,
+`model.cljc` and `ui.cljc`, then `com.example.model` and `com.example.ui`. The mount components should not change but
+you might want to check the `.edn` config files. `time-zone` is Datomic-specific so remove it by commenting out
+`timezone/attributes` from `com.example.model` and on whatever UIs TZ appears - in `fo/attributes` in `AccountForm`
+for example.
 
 == Copyright and License
 

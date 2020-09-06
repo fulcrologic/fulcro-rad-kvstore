@@ -1,37 +1,24 @@
-(ns com.example.components.database-queries
+(ns com.example.components.database-queries-k
   (:require
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [taoensso.encore :as enc]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
     [taoensso.timbre :as log]
-    [general.dev :as dev]))
-
-(defn context [env]
-  (if-let [db (some-> (get-in env [::key-value/databases :production]) deref)]
-    (if-not (satisfies? kv-adaptor/KeyStore db)
-      (throw (ex-info "db is not a KeyStore" {:db        db
-                                              :databases (keys (get env ::key-value/databases))}))
-      (let [kind (:key-value/kind (kv-adaptor/options db))]
-        (dev/log-off "found kind of" kind ", db" db)
-        (if (= :konserve kind)
-          [env (kv-adaptor/store db) kind]
-          [env db kind])))
-    (log/error "No database atom for production schema!")))
+    [konserve.core :as k]
+    [clojure.core.async :as async :refer [<!! chan go go-loop]]))
 
 (defn get-all-accounts
   [[env db] query-params]
-  (let [read-tree (kv-entity-read/read-tree-hof db env)]
-    (if (:show-inactive? query-params)
-      (->> (kv-adaptor/read-table db env :account/id)
-           (mapv (fn [[table id]] {table id})))
-      (->> (kv-adaptor/read-table db env :account/id)
-           (map read-tree)
-           (filter :account/active?)
-           (mapv #(select-keys % [:account/id]))))))
+  (if (:show-inactive? query-params)
+    (->> (keys (<!! (k/get-in db [:account/id])))
+         (mapv (fn [id] {:account/id id})))
+    (->> (vals (<!! (k/get-in db [:account/id])))
+         (filter :account/active?)
+         (mapv #(select-keys % [:account/id])))))
 
 (defn get-all-items
   [[env db] {:category/keys [id]}]
+  (assert false "get-all-items in k")
   (let [read-tree (kv-entity-read/read-tree-hof db env)]
     (if id
       (->> (kv-adaptor/read-table db env :item/id)
@@ -42,6 +29,7 @@
            (mapv (fn [[table id]] {table id}))))))
 
 (defn get-customer-invoices [[env db] {:account/keys [id]}]
+  (assert false "get-customer-invoices in k")
   (let [read-tree (kv-entity-read/read-tree-hof db env)]
     (->> (kv-adaptor/read-table db env :invoice/id)
          (map read-tree)
@@ -50,22 +38,26 @@
 
 (defn get-all-invoices
   [[env db] query-params]
+  (assert false "get-all-invoices in k")
   (->> (kv-adaptor/read-table db env :invoice/id)
        (mapv (fn [[table id]] {table id}))))
 
 (defn get-invoice-customer-id
   [[env db] invoice-id]
+  (assert false "get-invoice-customer-id in k")
   (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
       :invoice/customer
       second))
 
 (defn get-all-categories
   [[env db] query-params]
+  (assert false "get-all-categories in k")
   (->> (kv-adaptor/read-table db env :category/id)
        (mapv (fn [[table id]] {table id}))))
 
 (defn get-line-item-category
   [[env db] line-item-id]
+  (assert false "get-line-item-category in k")
   (let [i-id (-> (kv-adaptor/read1 db env [:line-item/id line-item-id]) :line-item/item second)
         c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]
     c-id))
@@ -73,6 +65,7 @@
 (defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."
   [{::key-value/keys [databases] :as env} username]
+  (assert false "get-login-info-2 in k")
   (let [db @(:production databases)
         read-tree (kv-entity-read/read-tree-hof db env)
         account (->> (kv-adaptor/read-table db env :account/id)
@@ -81,21 +74,3 @@
                      first)]
     (log/warn "account (TZ is key and s/be string)" (:time-zone/zone-id account))
     account))
-
-(defn d-pull [db pull eid]
-  (log/error "datomic pull with id" pull eid))
-
-;;
-;; Keeping to show that above we are not outputting the name of the time-zone
-;; (rather the keyword)
-;;
-(defn get-login-info-1
-  "Get the account name, time zone, and password info via a username (email)."
-  [{::key-value/keys [databases] :as env} username]
-  (enc/if-let [db @(:production databases)]
-              (d-pull db [:account/name
-                          {:time-zone/zone-id [:db/ident]}
-                          :password/hashed-value
-                          :password/salt
-                          :password/iterations]
-                      [:account/email username])))

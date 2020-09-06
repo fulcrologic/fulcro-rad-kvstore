@@ -91,4 +91,6 @@
   (-instance-name [this]
     (-> conn :spec :uri))
   (-options [this]
-    options))
+    options)
+  (-store [this]
+    (throw (ex-info "Can't do -store" {}))))

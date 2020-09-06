@@ -14,7 +14,10 @@
     (cond
       (eql/ident? reference) (case (kv-adaptor/cardinality reference)
                                :ident (kv-adaptor/read1 ks env reference)
-                               :idents (kv-adaptor/read* ks env reference))
+                               :idents (do
+                                         ;; So read* never ever being called
+                                         (throw (ex-info "Trapped code will never be called??" {:reference reference}))
+                                         (kv-adaptor/read* ks env reference)))
       (vector? reference) (let [recurse-f (idents->value-hof ks env)]
                             (mapv recurse-f reference))
       :else reference)))

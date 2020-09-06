@@ -118,8 +118,9 @@
 (defn all-invoices-of-an-account []
   (let [cid (new-uuid 103)
         db (conn)
-        read-tree (kv-entity-read/read-tree-hof db (env))]
-    (->> (kv-adaptor/read-table db (env) :invoice/id)
+        env (env)
+        read-tree (kv-entity-read/read-tree-hof db env)]
+    (->> (kv-adaptor/read-table db env :invoice/id)
          (map read-tree)
          (filterv #(= cid (-> % :invoice/customer :account/id)))
          dev/pp)))
