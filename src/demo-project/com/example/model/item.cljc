@@ -4,7 +4,8 @@
     [com.fulcrologic.rad.attributes-options :as ao]
     [com.wsscode.pathom.connect :as pc]
     #?(:clj [com.example.components.database-queries :as queries])
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
 (defattr id :item/id :uuid
   {ao/identity? true
@@ -33,11 +34,11 @@
    ao/schema     :production})
 
 (defattr all-items :item/all-items :ref
-  {ao/target    :item/id
-   ::pc/output  [{:item/all-items [:item/id]}]
-   ::pc/resolve (fn [{:keys [query-params] :as env} _]
-                  #?(:clj
-                     {:item/all-items (queries/get-all-items env (log/spy :info query-params))}))})
+         {ao/target    :item/id
+          ::pc/output  [{:item/all-items [:item/id]}]
+          ::pc/resolve (fn [{:keys [query-params] :as env} _]
+                         #?(:clj
+                            {:item/all-items (queries/get-all-items env (log/spy :info query-params))}))})
 
 #?(:clj
    (pc/defresolver item-category-resolver [{:keys [parser] :as env} {:item/keys [id]}]

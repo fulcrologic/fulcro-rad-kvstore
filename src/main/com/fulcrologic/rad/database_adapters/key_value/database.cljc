@@ -4,14 +4,10 @@
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-    [com.fulcrologic.rad.database-adapters.key-value.write-k :as kv-write-k]
     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.database-adapters.key-value.memory :as memory-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
-    [com.fulcrologic.rad.database-adapters.key-value.konserve :as konserve-adaptor]
-    [konserve.filestore :refer [new-fs-store]]
-    [clojure.core.async :as async :refer [<!! chan go go-loop]]
     [clojure.spec.alpha :as s]
     [taoensso.timbre :as log]))
 
@@ -34,11 +30,7 @@
              :clojure-atom (memory-adaptor/->MemoryKeyStore "MemoryKeyStore" (atom {}) main-database)
              :redis (let [{:redis/keys [uri]} main-database
                           conn {:pool {} :spec {:uri uri}}]
-                      (redis-adaptor/->RedisKeyStore conn main-database))
-             :konserve (let [location "/tmp/fulcro_rad_demo_db"
-                             store (<!! (new-fs-store location))]
-                         (konserve-adaptor/->KonserveKeyStore
-                           (str "Konserve fs at " location) store main-database)))}))
+                      (redis-adaptor/->RedisKeyStore conn main-database)))}))
 
 ;;
 ;; Later we can export to an edn file then import back in
@@ -57,15 +49,11 @@
   however they don't have to be"
   ([db tables entities]
    [::kv-adaptor/key-store ::key-value/tables (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
-   (let [kind (:key-value/kind (kv-adaptor/options db))
-         [remove-table-rows! write-tree] (if (= kind :konserve)
-                                           [kv-write-k/remove-table-rows! kv-write-k/write-tree]
-                                           [kv-write/remove-table-rows! kv-write/write-tree])]
-     (doseq [table tables]
-       (remove-table-rows! db {} table))
-     (when entities
-       (doseq [[table id value] entities]
-         (write-tree db {} value))))
+   (doseq [table tables]
+     (kv-write/remove-table-rows! db {} table))
+   (when entities
+     (doseq [[table id value] entities]
+       (kv-write/write-tree db {} value)))
    (log/info "Destructively reset" (count tables) "tables, replacing with data from" (count entities)))
   ([db tables]
    [::kv-adaptor/key-store ::key-value/tables => any?]

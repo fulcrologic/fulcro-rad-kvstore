@@ -12,7 +12,8 @@
     [cljc.java-time.local-date-time :as ldt]
     [taoensso.encore :as enc]
     [cljc.java-time.local-date :as ld]
-    [com.fulcrologic.rad.report :as report]))
+    [com.fulcrologic.rad.report :as report]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
 (defattr id :invoice/id :uuid
   {ao/identity? true
@@ -51,11 +52,11 @@
      {:account/id (queries/get-invoice-customer-id env id)}))
 
 (defattr all-invoices :invoice/all-invoices :ref
-  {ao/target     :invoice/id
-   ao/pc-output  [{:invoice/all-invoices [:invoice/id]}]
-   ao/pc-resolve (fn [{:keys [query-params] :as env} _]
-                   #?(:clj
-                      {:invoice/all-invoices (queries/get-all-invoices env query-params)}))})
+         {ao/target     :invoice/id
+          ao/pc-output  [{:invoice/all-invoices [:invoice/id]}]
+          ao/pc-resolve (fn [{:keys [query-params] :as env} _]
+                          #?(:clj
+                             {:invoice/all-invoices (queries/get-all-invoices env query-params)}))})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Statistics attributes.  Note that these are to-many, and are used by

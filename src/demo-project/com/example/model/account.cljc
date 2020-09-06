@@ -3,8 +3,7 @@
   (:require
     #?@(:clj
         [[com.wsscode.pathom.connect :as pc :refer [defmutation]]
-         [com.example.components.database-queries :as queries]
-         [com.example.components.database-queries-k :as queries-k]]
+         [com.example.components.database-queries :as queries]]
         :cljs
         [[com.fulcrologic.fulcro.mutations :as m :refer [defmutation]]])
     [com.wsscode.pathom.connect :as pc]
@@ -13,7 +12,9 @@
     [com.fulcrologic.rad.attributes :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
     [com.fulcrologic.rad.authorization :as auth]
-    [com.fulcrologic.rad.middleware.save-middleware :as save-middleware]))
+    [com.fulcrologic.rad.middleware.save-middleware :as save-middleware]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
 (defattr id :account/id :uuid
          {ao/identity? true
@@ -83,18 +84,14 @@
          {ao/target      :address/id
           ao/cardinality :many
           ao/identities  #{:account/id}
-          ao/schema      :production
-          })
+          ao/schema      :production})
 
 (defattr all-accounts :account/all-accounts :ref
          {ao/target     :account/id
           ao/pc-output  [{:account/all-accounts [:account/id]}]
           ao/pc-resolve (fn [{:keys [query-params] :as env} _]
                           #?(:clj
-                             {:account/all-accounts (when-let [[env db kind :as context] (queries/context env)]
-                                                      (if (= :konserve kind)
-                                                        (queries-k/get-all-accounts context query-params)
-                                                        (queries/get-all-accounts context query-params)))}))})
+                             {:account/all-accounts (queries/get-all-accounts env query-params)}))})
 
 (defattr account-invoices :account/invoices :ref
          {ao/target     :account/id

@@ -1,23 +1,22 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.pathom
   "Entry points for Pathom"
-  (:require [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
-            [clojure.pprint :refer [pprint]]
-            [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-            [com.fulcrologic.rad.attributes :as attr]
-            [com.fulcrologic.rad.form :as form]
-            [com.wsscode.pathom.core :as p]
-            [com.rpl.specter :as sp]
-            [taoensso.encore :as enc]
-            [com.wsscode.pathom.connect :as pc]
-            [com.fulcrologic.guardrails.core :refer [>defn => ?]]
-            [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-            [com.fulcrologic.rad.authorization :as auth]
-            [edn-query-language.core :as eql]
-            [clojure.spec.alpha :as s]
-            [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-            [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
-            [com.example.components.database-queries :as queries]
-            [taoensso.timbre :as log]))
+  (:require
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [clojure.pprint :refer [pprint]]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.attributes :as attr]
+    [com.fulcrologic.rad.form :as form]
+    [com.wsscode.pathom.core :as p]
+    [com.rpl.specter :as sp]
+    [taoensso.encore :as enc]
+    [com.wsscode.pathom.connect :as pc]
+    [com.fulcrologic.guardrails.core :refer [>defn => ?]]
+    [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
+    [com.fulcrologic.rad.authorization :as auth]
+    [edn-query-language.core :as eql]
+    [clojure.spec.alpha :as s]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
+    [taoensso.timbre :as log]))
 
 (defn pathom-plugin
   "A pathom plugin that adds the necessary `KeyStore` connections/databases (same thing) to the pathom env for
@@ -117,6 +116,26 @@
      :tempid->generated-id tempid->generated-id}))
 
 ;;
+;; Need kv-entry either ::key-value/databases or ::key-value/connections
+;; Although no difference between them!
+;; TODO
+;; Unfortunately calls to are in the model. We want to leave the model untouched. So rather move this call
+;; to database-queries.
+;;
+(defn context-f [schema kv-entry env]
+  (if-let [db-or-conn (cond
+                        (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
+                        (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref)
+                        )]
+    (if-not (satisfies? kv-adaptor/KeyStore db-or-conn)
+      (throw (ex-info "db is not a KeyStore" {:db db-or-conn}))
+      (let [kind (:key-value/kind (kv-adaptor/options db-or-conn))]
+        (if (= :konserve kind)
+          [(kv-adaptor/store db-or-conn) kind]
+          [db-or-conn kind])))
+    (log/error (str "No database atom for schema: " schema))))
+
+;;
 ;; TODO
 ;; Currently the atom is serving no purpose with only one connection.
 ;; Is only one connection fine?
@@ -127,34 +146,37 @@
 ;; a database - the goal is to have it work same as the Datomic database adapter - support multiple databases at
 ;; runtime.
 ;;
-(defn save-form!
-  "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
-  [env {::form/keys [delta] :as save-params}]
-  (let [schemas (schemas-for-delta env delta)
-        result (atom {:tempids {}})]
-    (log/debug "Saving form across " schemas)
-    (doseq [schema schemas
-            :let [connection (-> env ::key-value/connections (get schema))
-                  {:keys [tempid->string
-                          tempid->generated-id]} (delta->tempid-maps env delta)]]
-      (log/debug "Saving form delta" (with-out-str (pprint delta)))
-      (log/debug "on schema" schema)
-      (if connection
-        (try
-          (kv-write/write-delta connection env delta)
-          (let [tempid->real-id (into {}
-                                      (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
-                                      (keys tempid->string))]
-            ;; Datomic needs to read the world as moved forward by this transaction. No similar concept b/c we
-            ;; are always at the most recent.
-            ;(when database-atom
-            ;  (reset! database-atom (d/db connection)))
-            (swap! result update :tempids merge tempid->real-id))
-          (catch Exception e
-            (log/error e "Transaction failed!")
-            {}))
-        (log/error "Unable to save form. Connection missing in env." (keys env))))
-    @result))
+(declare context)
+#?(:clj (defn save-form!
+          "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
+          [env {::form/keys [delta] :as save-params}]
+          (let [schemas (schemas-for-delta env delta)
+                result (atom {:tempids {}})]
+            (log/debug "Saving form across " schemas)
+            (doseq [schema schemas
+                    :let [
+                          ;connection (-> env ::key-value/connections (get schema))
+                          [connection kind] (context-f schema ::key-value/connections env)
+                          {:keys [tempid->string
+                                  tempid->generated-id]} (delta->tempid-maps env delta)]]
+              (log/debug "Saving form delta" (with-out-str (pprint delta)))
+              (log/debug "on schema" schema)
+              (if connection
+                (try
+                  (kv-write/write-delta connection env delta)
+                  (let [tempid->real-id (into {}
+                                              (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
+                                              (keys tempid->string))]
+                    ;; Datomic needs to read the world as moved forward by this transaction. No similar concept b/c we
+                    ;; are always at the most recent.
+                    ;(when database-atom
+                    ;  (reset! database-atom (d/db connection)))
+                    (swap! result update :tempids merge tempid->real-id))
+                  (catch Exception e
+                    (log/error e "Transaction failed!")
+                    {}))
+                (log/error "Unable to save form. Connection missing in env." (keys env))))
+            @result)))
 
 (defn delete-entity!
   "Delete the given entity, if possible."
@@ -176,17 +198,17 @@
     (apply merge-with deep-merge xs)
     (last xs)))
 
-(defn wrap-save
-  "Form save middleware to accomplish saves."
-  ([]
-   (fn [{::form/keys [params] :as pathom-env}]
-     (let [save-result (save-form! pathom-env params)]
-       save-result)))
-  ([handler]
-   (fn [{::form/keys [params] :as pathom-env}]
-     (let [save-result (save-form! pathom-env params)
-           handler-result (handler pathom-env)]
-       (deep-merge save-result handler-result)))))
+#?(:clj (defn wrap-save
+          "Form save middleware to accomplish saves."
+          ([]
+           (fn [{::form/keys [params] :as pathom-env}]
+             (let [save-result (save-form! pathom-env params)]
+               save-result)))
+          ([handler]
+           (fn [{::form/keys [params] :as pathom-env}]
+             (let [save-result (save-form! pathom-env params)
+                   handler-result (handler pathom-env)]
+               (deep-merge save-result handler-result))))))
 
 (defn wrap-delete
   "Form delete middleware to accomplish deletes."
@@ -235,11 +257,8 @@
    input]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))
-        [env db kind :as context] (queries/context env)]
-    (let [read-compact (if (= kind :konserve)
-                         pathom-k/read-compact
-                         read-compact)
-          ids (if one?
+        [db kind :as context] (context-f :production ::key-value/databases env)]
+    (let [ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
           idents (mapv (fn [id]

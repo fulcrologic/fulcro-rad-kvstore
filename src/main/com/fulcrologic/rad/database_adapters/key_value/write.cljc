@@ -203,7 +203,7 @@
     (:after v)
     v))
 
-(defn- expand-to-after [m]
+(defn expand-to-after [m]
   (->> m
        (map (fn [[attrib attrib-v]]
               [attrib (-> attrib-v
@@ -216,7 +216,7 @@
 ;; `nil` is of course usually legitimate to put into a DB.
 ;; Could be handled earlier, at the form layer.
 ;;
-(defn- expand-to-after-no-nils-hof [new-entity?]
+(defn expand-to-after-no-nils-hof [new-entity?]
   (fn [m]
     (into {}
           (keep (fn [[attrib attrib-v]]

@@ -133,7 +133,7 @@
   (-options this))
 
 (>defn store
-  "Options (all boolean so far) that were set at the time of `KeyStore` creation"
+  "Return the store that can read and write from. Only Konserve needs to call this"
   [this]
   [::key-store => any?]
   (-store this))
