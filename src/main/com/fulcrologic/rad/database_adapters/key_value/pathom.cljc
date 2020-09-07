@@ -16,7 +16,10 @@
     [edn-query-language.core :as eql]
     [clojure.spec.alpha :as s]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-    [taoensso.timbre :as log]))
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write-k]
+    [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
+    [taoensso.timbre :as log]
+    [general.dev :as dev]))
 
 (defn pathom-plugin
   "A pathom plugin that adds the necessary `KeyStore` connections/databases (same thing) to the pathom env for
@@ -122,7 +125,9 @@
 ;; Unfortunately calls to are in the model. We want to leave the model untouched. So rather move this call
 ;; to database-queries.
 ;;
-(defn context-f [schema kv-entry env]
+(>defn context-f
+  [schema kv-entry env]
+  [keyword? keyword? map? => vector?]
   (if-let [db-or-conn (cond
                         (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
                         (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref)
@@ -134,7 +139,6 @@
           [(kv-adaptor/store db-or-conn) kind]
           [db-or-conn kind])))
     (log/error (str "No database atom for schema: " schema))))
-
 ;;
 ;; TODO
 ;; Currently the atom is serving no purpose with only one connection.
@@ -156,9 +160,12 @@
             (doseq [schema schemas
                     :let [
                           ;connection (-> env ::key-value/connections (get schema))
-                          [connection kind] (context-f schema ::key-value/connections env)
+                          [connection kind] (context-f env schema ::key-value/connections)
                           {:keys [tempid->string
-                                  tempid->generated-id]} (delta->tempid-maps env delta)]]
+                                  tempid->generated-id]} (delta->tempid-maps env delta)
+                          write-delta (if (= kind :konserve)
+                                        kv-write-k/write-delta
+                                        kv-write/write-delta)]]
               (log/debug "Saving form delta" (with-out-str (pprint delta)))
               (log/debug "on schema" schema)
               (if connection
@@ -257,8 +264,11 @@
    input]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))
-        [db kind :as context] (context-f :production ::key-value/databases env)]
-    (let [ids (if one?
+        [db kind :as context] (context-f env :production ::key-value/databases)]
+    (let [read-compact (if (= kind :konserve)
+                         pathom-k/read-compact
+                         read-compact)
+          ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
           idents (mapv (fn [id]

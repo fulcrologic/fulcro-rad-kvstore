@@ -9,10 +9,10 @@
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.attributes :as attr]
     [com.example.model :refer [all-attributes]]
+    [general.dev :as dev]
     [com.example.components.config :as config]
     [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
-    [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-    [general.dev :as dev]))
+    [com.fulcrologic.fulcro.algorithms.tempid :as tempid]))
 
 (defn x-1 []
   (let [retire-erick {[:account/id (new-uuid 100)]

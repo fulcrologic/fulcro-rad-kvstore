@@ -1,5 +1,6 @@
 (ns com.example.components.database-queries
   (:require
+    [com.example.components.database-queries-k :as queries-k]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [taoensso.encore :as enc]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
@@ -12,60 +13,74 @@
 (defn get-all-accounts
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (let [read-tree (kv-entity-read/read-tree-hof db env)]
-      (if (:show-inactive? query-params)
-        (->> (kv-adaptor/read-table db env :account/id)
-             (mapv (fn [[table id]] {table id})))
-        (->> (kv-adaptor/read-table db env :account/id)
-             (map read-tree)
-             (filter :account/active?)
-             (mapv #(select-keys % [:account/id])))))))
+    (if (= :konserve kind)
+      (queries-k/get-all-accounts [env db] query-params)
+      (let [read-tree (kv-entity-read/read-tree-hof db env)]
+        (if (:show-inactive? query-params)
+          (->> (kv-adaptor/read-table db env :account/id)
+               (mapv (fn [[table id]] {table id})))
+          (->> (kv-adaptor/read-table db env :account/id)
+               (map read-tree)
+               (filter :account/active?)
+               (mapv #(select-keys % [:account/id]))))))))
 
 (defn get-all-items
-  [env {:category/keys [id]}]
+  [env {:category/keys [id] :as query-params}]
   (when-let [[db kind :as context] (context-f env)]
-    (let [read-tree (kv-entity-read/read-tree-hof db env)]
-      (if id
-        (->> (kv-adaptor/read-table db env :item/id)
-             (map read-tree)
-             (filter #(#{id} (-> % :item/category :category/id)))
-             (mapv #(select-keys % [:item/id])))
-        (->> (kv-adaptor/read-table db env :item/id)
-             (mapv (fn [[table id]] {table id})))))))
+    (if (= :konserve kind)
+      (queries-k/get-all-items [env db] query-params)
+      (let [read-tree (kv-entity-read/read-tree-hof db env)]
+        (if id
+          (->> (kv-adaptor/read-table db env :item/id)
+               (map read-tree)
+               (filter #(#{id} (-> % :item/category :category/id)))
+               (mapv #(select-keys % [:item/id])))
+          (->> (kv-adaptor/read-table db env :item/id)
+               (mapv (fn [[table id]] {table id}))))))))
 
-(defn get-customer-invoices [env {:account/keys [id]}]
+(defn get-customer-invoices [env {:account/keys [id] :as query-params}]
   (when-let [[db kind :as context] (context-f env)]
-    (let [read-tree (kv-entity-read/read-tree-hof db env)]
-      (->> (kv-adaptor/read-table db env :invoice/id)
-           (map read-tree)
-           (filter #(= id (-> % :invoice/customer :account/id)))
-           (mapv #(select-keys % [:invoice/id]))))))
+    (if (= :konserve kind)
+      (queries-k/get-customer-invoices [env db] query-params)
+      (let [read-tree (kv-entity-read/read-tree-hof db env)]
+        (->> (kv-adaptor/read-table db env :invoice/id)
+             (map read-tree)
+             (filter #(= id (-> % :invoice/customer :account/id)))
+             (mapv #(select-keys % [:invoice/id])))))))
 
 (defn get-all-invoices
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (->> (kv-adaptor/read-table db env :invoice/id)
-         (mapv (fn [[table id]] {table id})))))
+    (if (= :konserve kind)
+      (queries-k/get-all-invoices [env db] query-params)
+      (->> (kv-adaptor/read-table db env :invoice/id)
+           (mapv (fn [[table id]] {table id}))))))
 
 (defn get-invoice-customer-id
   [env invoice-id]
   (when-let [[db kind :as context] (context-f env)]
-    (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
-        :invoice/customer
-        second)))
+    (if (= :konserve kind)
+      ()
+      (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
+          :invoice/customer
+          second))))
 
 (defn get-all-categories
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (->> (kv-adaptor/read-table db env :category/id)
-         (mapv (fn [[table id]] {table id})))))
+    (if (= :konserve kind)
+      ()
+      (->> (kv-adaptor/read-table db env :category/id)
+           (mapv (fn [[table id]] {table id}))))))
 
 (defn get-line-item-category
   [env line-item-id]
   (when-let [[db kind :as context] (context-f env)]
-    (let [i-id (-> (kv-adaptor/read1 db env [:line-item/id line-item-id]) :line-item/item second)
-          c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]
-      c-id)))
+    (if (= :konserve kind)
+      (queries-k/get-line-item-category [env db] line-item-id)
+      (let [i-id (-> (kv-adaptor/read1 db env [:line-item/id line-item-id]) :line-item/item second)
+            c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]
+        c-id))))
 
 (defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."

@@ -1,11 +1,12 @@
-{:paths   ["src/main"]
+{:paths   ["src/main" "src/demo-project"]
  :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
            com.fulcrologic/fulcro-rad {:mvn/version "1.0.0-RC1" :scope "provided"}
            com.taoensso/carmine       {:mvn/version "2.19.1"}
            ;; Nearly no longer required
            com.rpl/specter            {:mvn/version "1.1.3"}
+           io.replikativ/konserve     {:mvn/version "0.5.1"}
            }
- :aliases {:dev       {:extra-paths ["src/dev" "src/play" "src/demo-project" "resources"]
+ :aliases {:dev       {:extra-paths ["src/dev" "src/play" "resources"]
                        :extra-deps  {org.clojure/tools.namespace            {:mvn/version "1.0.0"}
 
                                      com.fulcrologic/fulcro                 {:mvn/version "3.2.12"}
@@ -37,8 +38,10 @@
                                      thheller/shadow-cljs                   {:mvn/version "2.10.21"}
                                      org.clojure/clojurescript              {:mvn/version "1.10.758"}
                                      cjmurphy/dev-lib                       {:mvn/version "0.1.0"}}}
-           :test      {:extra-paths ["src/test" "src/demo-project"]
-                       :extra-deps  {mount {:mvn/version "0.1.12"}}}
+           ;; Having demo-project in test makes Cursive mark that directory as testing, hence put up to parent
+           :test      {:extra-paths ["src/test"]
+                       :extra-deps  {mount            {:mvn/version "0.1.12"}
+                                     cjmurphy/dev-lib {:mvn/version "0.1.0"}}}
            :run-tests {
                        ;:jvm-opts   ["-Dguardrails.enabled=true"]
                        :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"

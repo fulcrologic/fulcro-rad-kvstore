@@ -17,13 +17,6 @@
   (let [conn (:main kv-connections)]
     {::key-value/databases {:production (atom conn)}}))
 
-#_(defn context []
-  (let [env (fn []
-              (mount/start)
-              (let [conn (:main kv-connections)]
-                {::key-value/databases {:production (atom conn)}}))]
-    (kv-pathom/context-f (env) :production ::key-value/databases)))
-
 ;; To prefer failures to errors when testing with kludge off
 (defn my-rand-nth [xs]
   (if (empty? xs)
