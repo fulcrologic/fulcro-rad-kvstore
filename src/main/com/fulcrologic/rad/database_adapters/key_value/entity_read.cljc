@@ -7,7 +7,7 @@
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [taoensso.timbre :as log]))
 
-(defn- idents->value-hof
+(defn- reading-idents->value-hof
   "reference is an ident or a vector of idents, or a scalar (in which case not a reference)"
   [ks env]
   (fn [reference]
@@ -18,7 +18,7 @@
                                          ;; So read* never ever being called
                                          (throw (ex-info "Trapped code will never be called??" {:reference reference}))
                                          (kv-adaptor/read* ks env reference)))
-      (vector? reference) (let [recurse-f (idents->value-hof ks env)]
+      (vector? reference) (let [recurse-f (reading-idents->value-hof ks env)]
                             (mapv recurse-f reference))
       :else reference)))
 
@@ -34,7 +34,7 @@
   [ks env ident]
   [::kv-adaptor/key-store map? ::key-value/ident => (? map?)]
   (let [entity (kv-adaptor/read1 ks env ident)
-        idents->value (idents->value-hof ks env)]
+        idents->value (reading-idents->value-hof ks env)]
     (when entity
       (into {}
             (map (fn [[k v]]
