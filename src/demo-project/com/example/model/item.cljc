@@ -4,8 +4,7 @@
     [com.fulcrologic.rad.attributes-options :as ao]
     [com.wsscode.pathom.connect :as pc]
     #?(:clj [com.example.components.database-queries :as queries])
-    [taoensso.timbre :as log]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
+    [taoensso.timbre :as log]))
 
 (defattr id :item/id :uuid
   {ao/identity? true

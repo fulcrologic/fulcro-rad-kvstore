@@ -12,9 +12,7 @@
     [com.fulcrologic.rad.attributes :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
     [com.fulcrologic.rad.authorization :as auth]
-    [com.fulcrologic.rad.middleware.save-middleware :as save-middleware]
-    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
+    [com.fulcrologic.rad.middleware.save-middleware :as save-middleware]))
 
 (defattr id :account/id :uuid
          {ao/identity? true

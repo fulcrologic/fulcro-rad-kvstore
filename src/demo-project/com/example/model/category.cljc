@@ -3,8 +3,7 @@
     [com.fulcrologic.rad.attributes :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
     [com.fulcrologic.fulcro.components :refer [defsc]]
-    #?(:clj [com.example.components.database-queries :as queries])
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
+    #?(:clj [com.example.components.database-queries :as queries])))
 
 (defsc Category [_ _]
   {:query [:category/id :category/label]

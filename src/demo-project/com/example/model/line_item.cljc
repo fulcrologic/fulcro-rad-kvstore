@@ -2,8 +2,7 @@
   (:require
     [com.fulcrologic.rad.attributes :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
-    #?(:clj [com.example.components.database-queries :as queries])
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
+    #?(:clj [com.example.components.database-queries :as queries])))
 
 (defattr id :line-item/id :uuid
          {ao/identity? true

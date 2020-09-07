@@ -4,7 +4,6 @@
   (:require
     [com.fulcrologic.rad.attributes :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
-    [com.fulcrologic.rad.report :as report]
     [com.fulcrologic.rad.report-options :as ro]
     [com.fulcrologic.guardrails.core :refer [>defn =>]]
     [com.wsscode.pathom.connect :as pc :refer [defresolver]]
