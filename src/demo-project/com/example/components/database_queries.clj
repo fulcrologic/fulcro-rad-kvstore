@@ -4,13 +4,14 @@
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [taoensso.encore :as enc]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
     [taoensso.timbre :as log]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
 (defn context-f [env]
   (let [[db kind :as context] (kv-pathom/context-f :production ::key-value/databases env)]
-    [(if (= :konserve kind)
+    [(if (kv-database/konserve-stores kind)
        (kv-adaptor/store db)
        db)
      kind]))
@@ -18,7 +19,7 @@
 (defn get-all-accounts
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-all-accounts [env db] query-params)
       (let [read-tree (kv-entity-read/read-tree-hof db env)]
         (if (:show-inactive? query-params)
@@ -32,7 +33,7 @@
 (defn get-all-items
   [env {:category/keys [id] :as query-params}]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-all-items [env db] query-params)
       (let [read-tree (kv-entity-read/read-tree-hof db env)]
         (if id
@@ -45,7 +46,7 @@
 
 (defn get-customer-invoices [env {:account/keys [id] :as query-params}]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-customer-invoices [env db] query-params)
       (let [read-tree (kv-entity-read/read-tree-hof db env)]
         (->> (kv-adaptor/read-table db env :invoice/id)
@@ -56,7 +57,7 @@
 (defn get-all-invoices
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-all-invoices [env db] query-params)
       (->> (kv-adaptor/read-table db env :invoice/id)
            (mapv (fn [[table id]] {table id}))))))
@@ -64,7 +65,7 @@
 (defn get-invoice-customer-id
   [env invoice-id]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-invoice-customer-id [env db] invoice-id)
       (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
           :invoice/customer
@@ -73,7 +74,7 @@
 (defn get-all-categories
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-all-categories [env db] query-params)
       (->> (kv-adaptor/read-table db env :category/id)
            (mapv (fn [[table id]] {table id}))))))
@@ -81,7 +82,7 @@
 (defn get-line-item-category
   [env line-item-id]
   (when-let [[db kind :as context] (context-f env)]
-    (if (= :konserve kind)
+    (if (kv-database/konserve-stores kind)
       (queries-k/get-line-item-category [env db] line-item-id)
       (let [i-id (-> (kv-adaptor/read1 db env [:line-item/id line-item-id]) :line-item/item second)
             c-id (-> (kv-adaptor/read1 db env [:item/id i-id]) :item/category second)]

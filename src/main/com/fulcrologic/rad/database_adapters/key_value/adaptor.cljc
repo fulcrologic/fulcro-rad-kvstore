@@ -40,7 +40,19 @@
     (keyword? ident-or-idents-or-table) :table
     (seq ident-or-idents-or-table) :idents))
 
-(defprotocol KeyStore
+;;
+;; Will have only one implementation (Konserve), and we will replace it with a map
+;;
+(defprotocol KeyStoreK
+  (-k-instance-name [this])
+  (-k-options [this])
+  (-k-store [this]))
+
+;;
+;; Will be removed when Konserve takes over
+;; H is for historical
+;;
+(defprotocol KeyStoreH
   (-read-table [this env table])
   (-read* [this env idents])
   (-read1 [this env ident])
@@ -52,7 +64,8 @@
   (-store [this]))
 
 (defn key-store? [x]
-  (satisfies? KeyStore x))
+  (or (satisfies? KeyStoreH x)
+      (satisfies? KeyStoreK x)))
 
 (s/def ::key-store key-store?)
 
@@ -124,16 +137,22 @@
   "A human readable identifier for this KeyStore. This identifier was set at the time of `KeyStore` creation"
   [this]
   [::key-store => string?]
-  (-instance-name this))
+  (if (satisfies? KeyStoreH this)
+    (-instance-name this)
+    (-k-instance-name this)))
 
 (>defn options
   "Options (all boolean so far) that were set at the time of `KeyStore` creation"
   [this]
   [::key-store => map?]
-  (-options this))
+  (if (satisfies? KeyStoreH this)
+    (-options this)
+    (-k-options this)))
 
 (>defn store
   "Return the store that can read and write from. Only Konserve needs to call this"
   [this]
   [::key-store => any?]
-  (-store this))
+  (if (satisfies? KeyStoreH this)
+    (-store this)
+    (-k-store this)))

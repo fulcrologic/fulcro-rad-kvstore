@@ -1,5 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.write
-  "All entry points for writing to a ::kv-adaptor/KeyStore that are outside the protocol itself. `::write-tree` and
+  "All entry points for writing to a ::kv-adaptor/KeyStoreH or K that are outside the protocol itself. `::write-tree` and
   `::remove-table-rows` are the ones to be familiar with"
   (:refer-clojure :exclude [flatten])
   (:require [edn-query-language.core :as eql]

@@ -9,7 +9,9 @@
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
  ;; The one that is :main will be picked up, the others ignored, but left here for reference.
-                                    {:main      {:key-value/kind             :redis
+ ;; In the future when we just use Konserve the 'k-' will go and there will only be one adaptor,
+ ;; so not need for a protocol at all. But no need to rush...
+                                    {:ignored-2 {:key-value/kind             :redis
                                                  :key-value/schema           :production
                                                  :key-value/table-kludge?    true
                                                  :key-value/dont-store-nils? true
@@ -17,9 +19,18 @@
                                      :ignored-1 {:key-value/kind             :clojure-atom
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production}
-                                     :ignored-2 {:key-value/kind             :konserve
+                                     :main      {:key-value/kind             :k-memory
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production}
+                                     :ignored-3 {:key-value/kind             :k-filestore
+                                                 :key-value/dont-store-nils? true
+                                                 :key-value/schema           :production
+                                                 :k-filestore/location       "/tmp/fulcro_rad_demo_db"}
+                                     :ignored-4 {:key-value/kind             :k-redis
+                                                 :key-value/dont-store-nils? true
+                                                 :key-value/schema           :production
+                                                 ;; Yes the same one but overwriting
+                                                 :k-redis/uri                "redis://127.0.0.1:6379/"}
                                      }
 
  :ring.middleware/defaults-config   {:params    {:keywordize true

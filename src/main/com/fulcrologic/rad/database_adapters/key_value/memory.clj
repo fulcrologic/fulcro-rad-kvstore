@@ -1,5 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.memory
-  "A reference implementation of `::kv-adaptor/KeyStore` that uses a Clojure atom as the database"
+  "A reference implementation of `::kv-adaptor/KeyStoreH` that uses a Clojure atom as the database"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -30,7 +30,7 @@
        keys
        (filterv #(= table (first %)))))
 
-(deftype MemoryKeyStore [keystore-name a options] kv-adaptor/KeyStore
+(deftype MemoryKeyStore [keystore-name a options] kv-adaptor/KeyStoreH
   (-read* [this env idents]
     (mapv (fn [ident] (get @a ident)) idents))
   (-read1 [this env ident]

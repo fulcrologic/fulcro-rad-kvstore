@@ -11,9 +11,13 @@
     [com.fulcrologic.rad.database-adapters.key-value.redis :as redis-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.konserve :as konserve-adaptor]
     [konserve.filestore :refer [new-fs-store]]
+    [konserve.memory :refer [new-mem-store]]
+    [konserve-carmine.core :refer [new-carmine-store]]
     [clojure.core.async :as async :refer [<!! chan go go-loop]]
     [clojure.spec.alpha :as s]
     [taoensso.timbre :as log]))
+
+(def konserve-stores #{:k-filestore :k-redis :k-memory})
 
 (>defn start
   "Returns a map containing only one database - the `:main` one.
@@ -35,10 +39,18 @@
              :redis (let [{:redis/keys [uri]} main-database
                           conn {:pool {} :spec {:uri uri}}]
                       (redis-adaptor/->RedisKeyStore conn main-database))
-             :konserve (let [location "/tmp/fulcro_rad_demo_db"
-                             store (<!! (new-fs-store location))]
+             :k-filestore (let [{:k-filestore/keys [location]} main-database
+                                store (<!! (new-fs-store location))]
+                            (konserve-adaptor/->KonserveKeyStore
+                              (str "Konserve fs at " location) store main-database))
+             :k-redis (let [{:k-redis/keys [uri]} main-database
+                                store (<!! (new-carmine-store uri))]
+                            (konserve-adaptor/->KonserveKeyStore
+                              (str "Konserve redis at " uri) store main-database))
+             :k-memory (let [store (<!! (new-mem-store))]
                          (konserve-adaptor/->KonserveKeyStore
-                           (str "Konserve fs at " location) store main-database)))}))
+                           (str "Konserve memory store") store main-database))
+             )}))
 
 ;;
 ;; Later we can export to an edn file then import back in
@@ -58,7 +70,7 @@
   ([db tables entities]
    [::kv-adaptor/key-store ::key-value/tables (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
    (let [kind (:key-value/kind (kv-adaptor/options db))
-         [remove-table-rows! write-tree] (if (= kind :konserve)
+         [remove-table-rows! write-tree] (if (konserve-stores kind)
                                            [kv-write-k/remove-table-rows! kv-write-k/write-tree]
                                            [kv-write/remove-table-rows! kv-write/write-tree])]
      (doseq [table tables]

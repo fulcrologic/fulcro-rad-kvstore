@@ -8,7 +8,8 @@
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [general.dev :as dev]))
+    [general.dev :as dev]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
 
 (defn env []
   (mount/start)
@@ -17,7 +18,7 @@
 
 (defn context-f []
   (let [[db kind :as context] (kv-pathom/context-f :production ::key-value/databases (env))]
-    [(if (= :konserve kind)
+    [(if (kv-database/konserve-stores kind)
        (kv-adaptor/store db)
        db)
      kind]))

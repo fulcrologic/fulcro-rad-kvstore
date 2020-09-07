@@ -1,5 +1,5 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.redis
-  "An implementation of `::kv-adaptor/KeyStore` for Redis"
+  "An implementation of `::kv-adaptor/KeyStoreH` for Redis"
   (:require
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
@@ -75,7 +75,7 @@
     (doseq [entry entries]
       (feed-pair! conn options entry))))
 
-(deftype RedisKeyStore [conn options] kv-adaptor/KeyStore
+(deftype RedisKeyStore [conn options] kv-adaptor/KeyStoreH
   (-read1 [this env ident]
     (car/wcar conn (car/get ident)))
   (-read* [this env idents]

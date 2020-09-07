@@ -18,7 +18,8 @@
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value.write-k :as kv-write-k]
     [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
 
 (defn pathom-plugin
   "A pathom plugin that adds the necessary `KeyStore` connections/databases (same thing) to the pathom env for
@@ -119,7 +120,7 @@
                         (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
                         (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref)
                         )]
-    (if-not (satisfies? kv-adaptor/KeyStore db-or-conn)
+    (if-not (s/valid? ::kv-adaptor/key-store db-or-conn)
       (throw (ex-info "db is not a KeyStore" {:db db-or-conn}))
       (let [kind (:key-value/kind (kv-adaptor/options db-or-conn))]
         [db-or-conn kind]))
@@ -148,7 +149,7 @@
                   [connection kind] (context-f schema ::key-value/connections env)
                   {:keys [tempid->string
                           tempid->generated-id]} (delta->tempid-maps env delta)
-                  write-delta (if (= kind :konserve)
+                  write-delta (if (kv-database/konserve-stores kind)
                                 kv-write-k/write-delta
                                 kv-write/write-delta)]]
       (log/debug "Saving form delta" (with-out-str (pprint delta)))
@@ -314,7 +315,7 @@
      ::pc/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
                             (log/debug "In resolver:" qualified-key "inputs:" input)
                             (let [[db kind :as context] (context-f :production ::key-value/databases env)
-                                  entity-query (if (= kind :konserve)
+                                  entity-query (if (kv-database/konserve-stores kind)
                                                  pathom-k/entity-query
                                                  entity-query)]
                               (->> (entity-query
