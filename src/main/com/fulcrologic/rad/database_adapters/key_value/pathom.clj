@@ -16,7 +16,7 @@
     [edn-query-language.core :as eql]
     [clojure.spec.alpha :as s]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write-k]
+    [com.fulcrologic.rad.database-adapters.key-value.write-k :as kv-write-k]
     [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
     [taoensso.timbre :as log]
     [general.dev :as dev]))
@@ -135,9 +135,7 @@
     (if-not (satisfies? kv-adaptor/KeyStore db-or-conn)
       (throw (ex-info "db is not a KeyStore" {:db db-or-conn}))
       (let [kind (:key-value/kind (kv-adaptor/options db-or-conn))]
-        (if (= :konserve kind)
-          [(kv-adaptor/store db-or-conn) kind]
-          [db-or-conn kind])))
+        [db-or-conn kind]))
     (log/error (str "No database atom for schema: " schema))))
 ;;
 ;; TODO
@@ -151,39 +149,39 @@
 ;; runtime.
 ;;
 (declare context)
-#?(:clj (defn save-form!
-          "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
-          [env {::form/keys [delta] :as save-params}]
-          (let [schemas (schemas-for-delta env delta)
-                result (atom {:tempids {}})]
-            (log/debug "Saving form across " schemas)
-            (doseq [schema schemas
-                    :let [
-                          ;connection (-> env ::key-value/connections (get schema))
-                          [connection kind] (context-f env schema ::key-value/connections)
-                          {:keys [tempid->string
-                                  tempid->generated-id]} (delta->tempid-maps env delta)
-                          write-delta (if (= kind :konserve)
-                                        kv-write-k/write-delta
-                                        kv-write/write-delta)]]
-              (log/debug "Saving form delta" (with-out-str (pprint delta)))
-              (log/debug "on schema" schema)
-              (if connection
-                (try
-                  (kv-write/write-delta connection env delta)
-                  (let [tempid->real-id (into {}
-                                              (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
-                                              (keys tempid->string))]
-                    ;; Datomic needs to read the world as moved forward by this transaction. No similar concept b/c we
-                    ;; are always at the most recent.
-                    ;(when database-atom
-                    ;  (reset! database-atom (d/db connection)))
-                    (swap! result update :tempids merge tempid->real-id))
-                  (catch Exception e
-                    (log/error e "Transaction failed!")
-                    {}))
-                (log/error "Unable to save form. Connection missing in env." (keys env))))
-            @result)))
+(defn save-form!
+  "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
+  [env {::form/keys [delta] :as save-params}]
+  (let [schemas (schemas-for-delta env delta)
+        result (atom {:tempids {}})]
+    (log/debug "Saving form across " schemas)
+    (doseq [schema schemas
+            :let [
+                  ;connection (-> env ::key-value/connections (get schema))
+                  [connection kind] (context-f schema ::key-value/connections env)
+                  {:keys [tempid->string
+                          tempid->generated-id]} (delta->tempid-maps env delta)
+                  write-delta (if (= kind :konserve)
+                                kv-write-k/write-delta
+                                kv-write/write-delta)]]
+      (log/debug "Saving form delta" (with-out-str (pprint delta)))
+      (log/debug "on schema" schema)
+      (if connection
+        (try
+          (write-delta connection env delta)
+          (let [tempid->real-id (into {}
+                                      (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
+                                      (keys tempid->string))]
+            ;; Datomic needs to read the world as moved forward by this transaction. No similar concept b/c we
+            ;; are always at the most recent.
+            ;(when database-atom
+            ;  (reset! database-atom (d/db connection)))
+            (swap! result update :tempids merge tempid->real-id))
+          (catch Exception e
+            (log/error e "Transaction failed!")
+            {}))
+        (log/error "Unable to save form. Connection missing in env." (keys env))))
+    @result))
 
 (defn delete-entity!
   "Delete the given entity, if possible."
@@ -205,17 +203,17 @@
     (apply merge-with deep-merge xs)
     (last xs)))
 
-#?(:clj (defn wrap-save
-          "Form save middleware to accomplish saves."
-          ([]
-           (fn [{::form/keys [params] :as pathom-env}]
-             (let [save-result (save-form! pathom-env params)]
-               save-result)))
-          ([handler]
-           (fn [{::form/keys [params] :as pathom-env}]
-             (let [save-result (save-form! pathom-env params)
-                   handler-result (handler pathom-env)]
-               (deep-merge save-result handler-result))))))
+(defn wrap-save
+  "Form save middleware to accomplish saves."
+  ([]
+   (fn [{::form/keys [params] :as pathom-env}]
+     (let [save-result (save-form! pathom-env params)]
+       save-result)))
+  ([handler]
+   (fn [{::form/keys [params] :as pathom-env}]
+     (let [save-result (save-form! pathom-env params)
+           handler-result (handler pathom-env)]
+       (deep-merge save-result handler-result)))))
 
 (defn wrap-delete
   "Form delete middleware to accomplish deletes."
@@ -264,7 +262,7 @@
    input]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))
-        [db kind :as context] (context-f env :production ::key-value/databases)]
+        [db kind :as context] (context-f :production ::key-value/databases env)]
     (let [read-compact (if (= kind :konserve)
                          pathom-k/read-compact
                          read-compact)

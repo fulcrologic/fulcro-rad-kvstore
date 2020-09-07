@@ -8,7 +8,12 @@
     [taoensso.timbre :as log]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]))
 
-(def context-f (partial kv-pathom/context-f :production ::key-value/databases))
+(defn context-f [env]
+  (let [[db kind :as context] (kv-pathom/context-f :production ::key-value/databases env)]
+    [(if (= :konserve kind)
+       (kv-adaptor/store db)
+       db)
+     kind]))
 
 (defn get-all-accounts
   [env query-params]
@@ -60,7 +65,7 @@
   [env invoice-id]
   (when-let [[db kind :as context] (context-f env)]
     (if (= :konserve kind)
-      ()
+      (queries-k/get-invoice-customer-id [env db] invoice-id)
       (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
           :invoice/customer
           second))))
@@ -69,7 +74,7 @@
   [env query-params]
   (when-let [[db kind :as context] (context-f env)]
     (if (= :konserve kind)
-      ()
+      (queries-k/get-all-categories [env db] query-params)
       (->> (kv-adaptor/read-table db env :category/id)
            (mapv (fn [[table id]] {table id}))))))
 

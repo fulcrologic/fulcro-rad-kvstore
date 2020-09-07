@@ -42,11 +42,13 @@
   For writing to our db we can just unwrap tempids, seen here in postwalk"
   [ks env delta]
   [::kv-adaptor/key-store map? map? => map?]
-  (let [pairs-of-ident-map (->> delta
+  (let [store (kv-adaptor/store ks)
+        dont-store-nils? (:key-value/dont-store-nils? (kv-adaptor/options ks))
+        pairs-of-ident-map (->> delta
                                 (map (fn [[[table id] m]]
                                        (when (string? id)
                                          (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
-                                       (let [handle-before-after (if (:key-value/dont-store-nils? (kv-adaptor/options ks))
+                                       (let [handle-before-after (if dont-store-nils?
                                                                    (kv-write/expand-to-after-no-nils-hof (tempid/tempid? id))
                                                                    kv-write/expand-to-after)]
                                          [[table id] (-> m
@@ -64,7 +66,7 @@
       (when-let [[ident m] (if (map? pair)
                              (first pair)
                              pair)]
-        (k/update-in ident merge m)
+        (k/update-in store ident merge m)
         (recur more))))
   ;; :tempids handled by caller
   {})
