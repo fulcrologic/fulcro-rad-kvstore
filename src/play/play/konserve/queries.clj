@@ -5,52 +5,37 @@
     [com.example.components.database-queries :as queries]
     [mount.core :as mount]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [general.dev :as dev]
-    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
+    [general.dev :as dev]))
 
 (defn env []
   (mount/start)
   (let [conn (:main kv-connections)]
     {::key-value/databases {:production (atom conn)}}))
 
-(defn context-f []
-  (let [[db kind :as context] (kv-pathom/context-f :production ::key-value/databases (env))]
-    [(if (kv-database/konserve-stores kind)
-       (kv-adaptor/store db)
-       db)
-     kind]))
-
 (defn x-1 []
-  (let [[fs] (context-f)]
-    (dev/pp (queries/get-all-accounts [{} fs] {}))))
+  (dev/pp (queries/get-all-accounts (env) {})))
 
 (defn x-2 []
-  (let [[fs] (context-f)]
-    (dev/pp (queries/get-all-items [{} fs] {:category/id (new-uuid 1000)}))))
+  (dev/pp (queries/get-all-items (env) {:category/id (new-uuid 1000)})))
 
 (defn x-3 []
-  (let [[fs] (context-f)]
-    (dev/pp (queries/get-customer-invoices [{} fs] {:account/id (new-uuid 103)}))))
+  (dev/pp (queries/get-customer-invoices (env) {:account/id (new-uuid 103)})))
 
 (defn x-4 []
-  (let [[fs] (context-f)]
-    (dev/pp (queries/get-all-invoices [{} fs] {}))))
+  (dev/pp (queries/get-all-invoices (env) {})))
 
 (defn x-5 []
-  (let [[fs] (context-f)
-        random-invoice (rand-nth (queries/get-all-invoices [{} fs] {}))]
-    (queries/get-invoice-customer-id [{} fs] (:invoice/id random-invoice))))
+  (let [env (env)
+        random-invoice (rand-nth (queries/get-all-invoices env {}))]
+    (queries/get-invoice-customer-id env (:invoice/id random-invoice))))
 
 (defn x-6 []
-  (let [[fs] (context-f)]
-    (dev/pp (queries/get-all-categories [{} fs] {}))))
+  (dev/pp (queries/get-all-categories (env) {})))
 
 (defn x-7 []
-  (let [[fs] (context-f)
-        random-line-item (rand-nth (queries/get-all-line-items [{} fs] {}))]
-    (queries/get-line-item-category [{} fs] (:line-item/id random-line-item))))
+  (let [env (env)
+        random-line-item (rand-nth (queries/get-all-line-items env {}))]
+    (queries/get-line-item-category env (:line-item/id random-line-item))))
 
 

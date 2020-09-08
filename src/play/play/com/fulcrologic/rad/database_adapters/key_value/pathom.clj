@@ -5,7 +5,6 @@
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.attributes :as attr]
     [com.example.model :refer [all-attributes]]
@@ -39,7 +38,8 @@
                ::key-value/connections {:production main}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          retired-erick (kv-database/ident->entity main [:account/id (new-uuid 100)])]
+          {:keys [ident->entity]} main
+          retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (dev/pp [tempids-map (:account/active? retired-erick)]))))
 
 (defn new-user-delta [user-tempid address-tempid]

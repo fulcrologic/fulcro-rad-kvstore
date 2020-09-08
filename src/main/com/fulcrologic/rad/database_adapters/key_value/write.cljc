@@ -4,9 +4,7 @@
   (:refer-clojure :exclude [flatten])
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
-            [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    ;[com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
@@ -179,19 +177,13 @@
                           dissoc-parent-joins)]))
        distinct))
 
-(defn ->store [db]
-  (if (s/valid? ::kv-adaptor/key-store db)
-    (kv-adaptor/store db)
-    db))
-
 (>defn write-tree
   "Writing will work whether given denormalized or normalized. Use this function to seed/import large amounts of
   data. As long as the input is coherent all the references should be respected. See
   `com.example.components.seeded-connection/seed!` for example usage."
-  [ks env m]
-  [::kv-adaptor/key-store map? map? => any?]
-  (let [store (->store ks)
-        entries (flatten m)]
+  [{:keys [store]} env m]
+  [::key-value/key-store map? map? => any?]
+  (let [entries (flatten m)]
     (<!! (go-loop [entries entries]
            (when-let [[ident m] (first entries)]
              (k/assoc-in store ident m)
@@ -234,9 +226,9 @@
 
 (>defn remove-table-rows!
   "Given a table find out all its rows and remove them"
-  [ks env table]
-  [::kv-adaptor/key-store map? ::key-value/table => any?]
-  (<!! (k/dissoc (->store ks) table)))
+  [{:keys [store]} env table]
+  [::key-value/key-store map? ::key-value/table => any?]
+  (<!! (k/dissoc store table)))
 
 (>defn write-delta
   "What a delta looks like (only one map-entry here):
@@ -249,10 +241,9 @@
   Then generate a table using tempid->uuid.
   However tempid handling already being done outside this function, so just returning {}.
   For writing to our db we can just unwrap tempids, seen here in postwalk"
-  [ks env delta]
-  [::kv-adaptor/key-store map? map? => map?]
-  (let [store (->store ks)
-        dont-store-nils? (:key-value/dont-store-nils? (kv-adaptor/options ks))
+  [{:keys [store options]} env delta]
+  [::key-value/key-store map? map? => map?]
+  (let [dont-store-nils? (:key-value/dont-store-nils? options)
         pairs-of-ident-map (->> delta
                                 (map (fn [[[table id] m]]
                                        (when (string? id)

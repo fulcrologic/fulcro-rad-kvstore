@@ -5,7 +5,7 @@
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.example.components.config :as config]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.type-support.date-time :as dt]
@@ -67,10 +67,10 @@
 
 (>defn seed!
   "Get rid of all data in the database then build it again from the data structure at all-entities"
-  [connection]
-  [::kv-adaptor/key-store => any?]
+  [{:keys [instance-name] :as connection}]
+  [::key-value/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
-  (println "SEEDING data (Starting fresh). For" (kv-adaptor/instance-name connection))
+  (println "SEEDING data (Starting fresh). For" instance-name)
   (kv-database/destructive-reset connection (all-tables!) (all-entities!)))
 
 ;;

@@ -5,7 +5,6 @@
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
             [com.fulcrologic.rad.ids :refer [new-uuid]]
-            [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.rad.form :as form]
@@ -33,10 +32,8 @@
                ::key-value/connections {:production main}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          ;; Instead of this
-          ;; (kv-adaptor/read1 main env [:account/id (new-uuid 100)])
-          ;; Do this
-          retired-erick (kv-database/ident->entity main [:account/id (new-uuid 100)])]
+          {:keys [ident->entity]} main
+          retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
       (is (false? (:account/active? retired-erick))))
     (kv-database/destructive-reset main (all-tables!) (all-entities!))))
@@ -77,19 +74,21 @@
         _ (kv-database/destructive-reset main (all-tables!))
         tempids-map (kv-pathom/save-form! env {::form/delta delta})
         user-in-tempids (get (:tempids tempids-map) user-tempid)
-        address-in-tempids (get (:tempids tempids-map) address-tempid)]
+        address-in-tempids (get (:tempids tempids-map) address-tempid)
+        {:keys [ident->entity read-table-idents]} main]
     (is user-in-tempids)
     (is address-in-tempids)
     (is (= user-in-tempids user-uuid))
     (is (= address-in-tempids address-uuid))
-    (let [user-email (:account/email (<!! (k/get-in (kv-adaptor/store main) [:account/id user-uuid])))]
+    (let [user-email (:account/email (ident->entity [:account/id user-uuid]))]
       (is (= user-email email))
-      (is (= 1 (-> (kv-database/read-table-idents main :address/id)
+      (is (= 1 (-> (read-table-idents :address/id)
                    count))))
     (kv-database/destructive-reset main (all-tables!) (all-entities!))))
 
 (defn x-1
   "Hmm - memory db not very helpful here, as no automatic seeding when call directly like this"
   []
-  (let [{:keys [main]} (kv-database/start config/config)]
-    (<!! (k/get-in (kv-adaptor/store main) [:address/id]))))
+  (let [{:keys [main]} (kv-database/start config/config)
+        {:keys [store]} main]
+    (<!! (k/get-in store [:address/id]))))

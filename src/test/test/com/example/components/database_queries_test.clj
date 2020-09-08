@@ -2,7 +2,6 @@
   (:require
     [clojure.test :refer :all]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.example.components.database-queries :as queries]
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -14,11 +13,6 @@
 (deftest always-passes
   (let [amount 1000]
     (is (= 1000 amount))))
-
-#_(defn env-db []
-  (mount/start)
-  (let [conn (kv-adaptor/store (:main kv-connections))]
-    [{::key-value/databases {:production (atom conn)}} conn]))
 
 (defn env []
   (mount/start)
@@ -71,15 +65,15 @@
 
 (deftest customer-on-an-invoice
   (let [env (env)
-        conn (:main kv-connections)
-        iident (my-rand-nth (kv-database/read-table-idents conn :invoice/id))
+        {:keys [read-table-idents]} (:main kv-connections)
+        iident (my-rand-nth (read-table-idents :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
-        conn (:main kv-connections)
-        li-ident (my-rand-nth (kv-database/read-table-idents conn :line-item/id))
+        {:keys [read-table-idents]} (:main kv-connections)
+        li-ident (my-rand-nth (read-table-idents :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 

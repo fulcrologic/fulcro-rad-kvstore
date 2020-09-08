@@ -7,11 +7,9 @@
     [com.example.model :refer [all-attributes]]
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
     [konserve.core :as k]))
 
@@ -20,7 +18,8 @@
 (defn conn [] (:main kv-connections))
 
 (defn read-from-connection []
-  (dev/pp (kv-database/ident->entity (conn) [:account/id #uuid "ffffffff-ffff-ffff-ffff-000000000100"])))
+  (let [{:keys [ident->entity]} (conn)]
+    (dev/pp (ident->entity [:account/id #uuid "ffffffff-ffff-ffff-ffff-000000000100"]))))
 
 (defn env-before-use-parser []
   (let [env {:parser               parser/parser
@@ -65,7 +64,8 @@
          dev/pp)))
 
 (defn view-current-connection []
-  (kv-adaptor/instance-name (conn)))
+  (let [{:keys [instance-name]} (conn)]
+    instance-name))
 
 (defn entire-db []
   (dev/pp (kv-database/export (conn) (env) (all-tables!))))
@@ -79,23 +79,26 @@
       (kv-write/remove-table-rows! db (env) table))))
 
 (defn all-addresses []
-  (kv-database/read-table (conn) :address/id))
+  (let [{:keys [read-table]} (conn)]
+    (read-table :address/id)))
 
 (defn all-line-items []
-  (kv-database/read-table (conn) :line-item/id))
+  (let [{:keys [read-table]} (conn)]
+    (read-table :line-item/id)))
 
 (defn all-accounts []
-  (dev/pp (kv-database/read-table (conn) :account/id)))
+  (let [{:keys [read-table]} (conn)]
+    (dev/pp (read-table :account/id))))
 
 (defn every-line-item-expanded []
-  (let [db (conn)]
-    (->> (kv-database/read-table db :line-item/id)
+  (let [{:keys [read-table]} (conn)]
+    (->> (read-table :line-item/id)
          dev/pp)))
 
 (defn all-item-ids-where-cat-id []
-  (let [db (conn)
+  (let [{:keys [read-table]} (conn)
         toys-cat-id (new-uuid 1002)]
-    (->> (kv-database/read-table db :item/id)
+    (->> (read-table :item/id)
          (filterv #(#{toys-cat-id} (-> % :item/category second)))
          dev/pp)))
 
@@ -107,8 +110,8 @@
 ;       [?c :account/id ?cid]] db id)
 (defn all-invoices-of-an-account []
   (let [cid (new-uuid 103)
-        db (conn)]
-    (->> (kv-database/read-table db :invoice/id)
+        {:keys [read-table]} (conn)]
+    (->> (read-table :invoice/id)
          (filterv #(= cid (-> % :invoice/customer second)))
          dev/pp)))
 
@@ -120,27 +123,25 @@
 ;       [?c :account/id ?account-uuid]] db invoice-id)
 
 (defn given-invoice-get-customer []
-  (let [db (conn)
-        env (env)]
-    (-> (rand-nth (kv-database/read-table db :invoice/id))
+  (let [{:keys [read-table]} (conn)]
+    (-> (rand-nth (read-table :invoice/id))
         :invoice/customer)))
 
 (defn given-line-item-get-category []
-  (let [env (env)
-        db (conn)
-        li-ident (rand-nth (kv-database/read-table-idents db :line-item/id))
-        i-id (-> (kv-database/ident->entity db li-ident) :line-item/item second)
-        c-id (-> (kv-database/ident->entity db [:item/id i-id]) :item/category second)]
+  (let [{:keys [read-table-idents ident->entity]} (conn)
+        li-ident (rand-nth (read-table-idents :line-item/id))
+        i-id (-> (ident->entity li-ident) :line-item/item second)
+        c-id (-> (ident->entity [:item/id i-id]) :item/category second)]
     c-id))
 
 (defn alter-test []
-  (let [db (conn)
-        active-accounts-1 (->> (kv-database/read-table db :account/id)
+  (let [{:keys [read-table write-entity]} (conn)
+        active-accounts-1 (->> (read-table :account/id)
                                (filter :account/active?))
         altered-account (assoc (rand-nth active-accounts-1) :account/active? false)
         num-active-1 (count active-accounts-1)]
-    (kv-database/write-entity db altered-account)
-    (let [active-accounts-2 (->> (kv-database/read-table db :account/id)
+    (write-entity altered-account)
+    (let [active-accounts-2 (->> (read-table :account/id)
                                  (filter :account/active?))
           num-active-2 (count active-accounts-2)]
       [num-active-1 num-active-2])))

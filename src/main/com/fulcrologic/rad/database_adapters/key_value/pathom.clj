@@ -1,13 +1,11 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.pathom
   "Entry points for Pathom"
   (:require
-    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [clojure.pprint :refer [pprint]]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.form :as form]
     [com.wsscode.pathom.core :as p]
-    [com.rpl.specter :as sp]
     [taoensso.encore :as enc]
     [com.wsscode.pathom.connect :as pc]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -41,16 +39,13 @@
   (p/env-wrap-plugin
     (fn [env]
       (let [database-connection-map (database-mapper env)
-            databases-1 (sp/transform [sp/MAP-VALS] (fn [v] (atom v)) database-connection-map)
-            databases-2 (into {}
+            databases (into {}
                               (map (fn [[k v]]
                                      [k (atom v)]))
                               database-connection-map)]
-        (when (not= (-> databases-1 first key) (-> databases-2 first key))
-          (throw (ex-info "databases-1 and databases-2 not equal" {:databases-1 databases-1 :databases-2 databases-2})))
         (assoc env
           ::key-value/connections database-connection-map
-          ::key-value/databases databases-2)))))
+          ::key-value/databases databases)))))
 
 (defn- keys-in-delta
   "Copied from or very similar to datomic function of same name"
@@ -102,11 +97,8 @@
 (defn tempid->intermediate-id
   "Copied from or very similar to datomic function of same name, except rid of specter use"
   [delta]
-  (let [tempids-1 (set (sp/select (sp/walker tempid/tempid?) delta))
-        tempids-2 (tempids-in-delta delta)
-        _ (when (not= tempids-1 tempids-2)
-            (throw (ex-info "tempids-1 and tempids-2 not equal" {:tempids-1 tempids-1 :tempids-2 tempids-2})))
-        fulcro-tempid->real-id (into {} (map (fn [t] [t (str (:id t))]) tempids-2))]
+  (let [tempids (tempids-in-delta delta)
+        fulcro-tempid->real-id (into {} (map (fn [t] [t (str (:id t))]) tempids))]
     fulcro-tempid->real-id))
 
 (>defn delta->tempid-maps
@@ -121,22 +113,19 @@
 ;;
 ;; Need kv-entry either ::key-value/databases or ::key-value/connections
 ;; Although no difference between them!
-;; TODO
-;; Unfortunately calls to are in the model. We want to leave the model untouched. So rather move this call
-;; to database-queries.
 ;;
 (>defn context-f
   [schema kv-entry env]
   [keyword? keyword? map? => vector?]
-  (if-let [db-or-conn (cond
+  (if-let [{:keys [options] :as db-or-conn} (cond
                         (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
-                        (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref)
-                        )]
-    (if-not (s/valid? ::kv-adaptor/key-store db-or-conn)
+                        (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
+    (if-not (s/valid? ::key-value/key-store db-or-conn)
       (throw (ex-info "db is not a KeyStore" {:db db-or-conn}))
-      (let [kind (:key-value/kind (kv-adaptor/options db-or-conn))]
+      (let [kind (:key-value/kind options)]
         [db-or-conn kind]))
     (log/error (str "No database atom for schema: " schema))))
+
 ;;
 ;; TODO
 ;; Currently the atom is serving no purpose with only one connection.
@@ -187,9 +176,9 @@
                id (get params pk)
                ident [pk id]
                {:keys [::attr/schema]} (key->attribute pk)
-               connection (-> env ::key-value/connections (get schema))]
+               {:keys [store]} (-> env ::key-value/connections (get schema))]
               (do
-                (<!! (k/update (kv-database/->store connection) pk dissoc id))
+                (<!! (k/update store pk dissoc id))
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
 
@@ -246,7 +235,8 @@
    context]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))
-        [db kind] context]
+        [db kind] context
+        {:keys [store]} db]
     (let [ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
@@ -258,7 +248,7 @@
       (let [result (mapv (fn [ident]
                            (<!!
                              (go
-                               (let [entity (<! (k/get-in (kv-adaptor/store db) ident))]
+                               (let [entity (<! (k/get-in store ident))]
                                  (when entity
                                    (into {}
                                          (map (fn [[k v]]
@@ -285,13 +275,7 @@
   "Fix the ID keys recursively on result."
   [k->a ast-nodes result]
   [map? vector? map? => map?]
-  (let [first-identity (first-identity-hof k->a)
-        id? (fn [{:keys [dispatch-key]}] (some-> dispatch-key k->a ::attr/identity?))
-        id-key-1 (:key (sp/select-first [sp/ALL id?] ast-nodes))
-        id-key-2 (first-identity ast-nodes)
-        _ (when (not= id-key-1 id-key-2)
-            (throw (ex-info "id-key-1 and id-key-2 not equal" {:id-key-1 id-key-1 :id-key-2 id-key-2})))
-        join-key->children (into {}
+  (let [join-key->children (into {}
                                  (comp
                                    (filter #(= :join (:type %)))
                                    (map (fn [{:keys [key children]}] [key children])))
