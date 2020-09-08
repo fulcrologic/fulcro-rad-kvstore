@@ -6,10 +6,14 @@
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    ;[com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
-            [taoensso.timbre :as log]))
+            [konserve.core :as k]
+            [clojure.core.async :as async :refer [<!! chan go go-loop]]
+            [taoensso.timbre :as log]
+            [clojure.spec.alpha :as s]))
 
 (>defn ident-of
   "Used when composing data to be stored. When a join is a reference (this function returns an ident reference) you
@@ -175,22 +179,23 @@
                           dissoc-parent-joins)]))
        distinct))
 
+(defn ->store [db]
+  (if (s/valid? ::kv-adaptor/key-store db)
+    (kv-adaptor/store db)
+    db))
+
 (>defn write-tree
   "Writing will work whether given denormalized or normalized. Use this function to seed/import large amounts of
   data. As long as the input is coherent all the references should be respected. See
   `com.example.components.seeded-connection/seed!` for example usage."
   [ks env m]
   [::kv-adaptor/key-store map? map? => any?]
-  (let [entries (flatten m)]
-    (kv-adaptor/write* ks env entries)))
-
-(>defn remove-table-rows!
-  "Given a table find out all its rows and remove them"
-  [ks env table]
-  [::kv-adaptor/key-store map? ::key-value/table => any?]
-  (let [idents (kv-adaptor/read-table ks env table)]
-    (doseq [ident idents]
-      (kv-adaptor/remove1 ks env ident))))
+  (let [store (->store ks)
+        entries (flatten m)]
+    (<!! (go-loop [entries entries]
+           (when-let [[ident m] (first entries)]
+             (k/assoc-in store ident m)
+             (recur (rest entries)))))))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))
 
@@ -227,6 +232,12 @@
                     [attrib attrib-v])))
           m)))
 
+(>defn remove-table-rows!
+  "Given a table find out all its rows and remove them"
+  [ks env table]
+  [::kv-adaptor/key-store map? ::key-value/table => any?]
+  (<!! (k/dissoc (->store ks) table)))
+
 (>defn write-delta
   "What a delta looks like (only one map-entry here):
 
@@ -240,21 +251,31 @@
   For writing to our db we can just unwrap tempids, seen here in postwalk"
   [ks env delta]
   [::kv-adaptor/key-store map? map? => map?]
-  (kv-adaptor/write* ks env
-                     (->> delta
-                          (map (fn [[[table id] m]]
-                                 (when (string? id)
-                                   (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
-                                 (let [handle-before-after (if (:key-value/dont-store-nils? (kv-adaptor/options ks))
-                                                             (expand-to-after-no-nils-hof (tempid/tempid? id))
-                                                             expand-to-after)]
-                                   [[table id] (-> m
-                                                   handle-before-after
-                                                   (assoc table id))])))
-                          (walk/postwalk
-                            (fn [x] (if (tempid/tempid? x)
-                                      (:id x)
-                                      x)))
-                          (into {})))
+  (let [store (->store ks)
+        dont-store-nils? (:key-value/dont-store-nils? (kv-adaptor/options ks))
+        pairs-of-ident-map (->> delta
+                                (map (fn [[[table id] m]]
+                                       (when (string? id)
+                                         (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
+                                       (let [handle-before-after (if dont-store-nils?
+                                                                   (expand-to-after-no-nils-hof (tempid/tempid? id))
+                                                                   expand-to-after)]
+                                         [[table id] (-> m
+                                                         handle-before-after
+                                                         (assoc table id))])))
+                                (walk/postwalk
+                                  (fn [x] (if (tempid/tempid? x)
+                                            (:id x)
+                                            x)))
+                                (into {}))
+        pairs (cond
+                ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
+                (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
+    (<!! (go-loop [[pair & more] pairs]
+           (when-let [[ident m] (if (map? pair)
+                                  (first pair)
+                                  pair)]
+             (k/update-in store ident merge m)
+             (recur more)))))
   ;; :tempids handled by caller
   {})

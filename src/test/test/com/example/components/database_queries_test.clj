@@ -6,11 +6,19 @@
     [com.example.components.database-queries :as queries]
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [mount.core :as mount]))
+    [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
+    [mount.core :as mount]
+    [konserve.core :as k]
+    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
 
 (deftest always-passes
   (let [amount 1000]
     (is (= 1000 amount))))
+
+#_(defn env-db []
+  (mount/start)
+  (let [conn (kv-adaptor/store (:main kv-connections))]
+    [{::key-value/databases {:production (atom conn)}} conn]))
 
 (defn env []
   (mount/start)
@@ -64,14 +72,14 @@
 (deftest customer-on-an-invoice
   (let [env (env)
         conn (:main kv-connections)
-        iident (my-rand-nth (kv-adaptor/read-table conn {} :invoice/id))
+        iident (my-rand-nth (kv-database/read-table-idents conn :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
         conn (:main kv-connections)
-        li-ident (my-rand-nth (kv-adaptor/read-table conn {} :line-item/id))
+        li-ident (my-rand-nth (kv-database/read-table-idents conn :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 
@@ -81,7 +89,8 @@
         {:account/keys [id name email]} (queries/get-login-info-2 env "sam@example.com")]
     (is (= id (new-uuid 101)))
     (is (= name "Sam"))
-    (is (= email "sam@example.com"))))
+    (is (= email "sam@example.com"))
+    ))
 
 ;;
 ;; It is true there's no category at 1001, in my data anyway

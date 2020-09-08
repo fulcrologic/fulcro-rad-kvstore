@@ -39,7 +39,7 @@
                ::key-value/connections {:production main}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          retired-erick (kv-adaptor/read1 main env [:account/id (new-uuid 100)])]
+          retired-erick (kv-database/ident->entity main [:account/id (new-uuid 100)])]
       (dev/pp [tempids-map (:account/active? retired-erick)]))))
 
 (defn new-user-delta [user-tempid address-tempid]

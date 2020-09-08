@@ -2,7 +2,7 @@
   (:require
     [clojure.core.async :as async :refer [<!! chan go go-loop]]
     [com.example.components.seeded-connection :refer [kv-connections]]
-    [com.example.components.database-queries-k :as queries-k]
+    [com.example.components.database-queries :as queries]
     [mount.core :as mount]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
@@ -25,32 +25,32 @@
 
 (defn x-1 []
   (let [[fs] (context-f)]
-    (dev/pp (queries-k/get-all-accounts [{} fs] {}))))
+    (dev/pp (queries/get-all-accounts [{} fs] {}))))
 
 (defn x-2 []
   (let [[fs] (context-f)]
-    (dev/pp (queries-k/get-all-items [{} fs] {:category/id (new-uuid 1000)}))))
+    (dev/pp (queries/get-all-items [{} fs] {:category/id (new-uuid 1000)}))))
 
 (defn x-3 []
   (let [[fs] (context-f)]
-    (dev/pp (queries-k/get-customer-invoices [{} fs] {:account/id (new-uuid 103)}))))
+    (dev/pp (queries/get-customer-invoices [{} fs] {:account/id (new-uuid 103)}))))
 
 (defn x-4 []
   (let [[fs] (context-f)]
-    (dev/pp (queries-k/get-all-invoices [{} fs] {}))))
+    (dev/pp (queries/get-all-invoices [{} fs] {}))))
 
 (defn x-5 []
   (let [[fs] (context-f)
-        random-invoice (rand-nth (queries-k/get-all-invoices [{} fs] {}))]
-    (queries-k/get-invoice-customer-id [{} fs] (:invoice/id random-invoice))))
+        random-invoice (rand-nth (queries/get-all-invoices [{} fs] {}))]
+    (queries/get-invoice-customer-id [{} fs] (:invoice/id random-invoice))))
 
 (defn x-6 []
   (let [[fs] (context-f)]
-    (dev/pp (queries-k/get-all-categories [{} fs] {}))))
+    (dev/pp (queries/get-all-categories [{} fs] {}))))
 
 (defn x-7 []
   (let [[fs] (context-f)
-        random-line-item (rand-nth (queries-k/get-all-line-items [{} fs] {}))]
-    (queries-k/get-line-item-category [{} fs] (:line-item/id random-line-item))))
+        random-line-item (rand-nth (queries/get-all-line-items [{} fs] {}))]
+    (queries/get-line-item-category [{} fs] (:line-item/id random-line-item))))
 
 

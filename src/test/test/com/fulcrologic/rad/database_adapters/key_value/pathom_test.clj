@@ -14,7 +14,8 @@
             [com.example.model.seed :as seed]
             [com.example.components.config :as config]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-            [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]))
+            [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
+            [konserve.core :as k]))
 
 (deftest alter-existing
   (let [{:keys [main]} (kv-database/start config/config)
@@ -32,7 +33,10 @@
                ::key-value/connections {:production main}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          retired-erick (kv-adaptor/read1 main env [:account/id (new-uuid 100)])]
+          ;; Instead of this
+          ;; (kv-adaptor/read1 main env [:account/id (new-uuid 100)])
+          ;; Do this
+          retired-erick (kv-database/ident->entity main [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
       (is (false? (:account/active? retired-erick))))
     (kv-database/destructive-reset main (all-tables!) (all-entities!))))
@@ -78,9 +82,14 @@
     (is address-in-tempids)
     (is (= user-in-tempids user-uuid))
     (is (= address-in-tempids address-uuid))
-    (let [user-email (->> [:account/id user-uuid]
-                          (kv-entity-read/read-tree main env)
-                          :account/email)]
+    (let [user-email (:account/email (<!! (k/get-in (kv-adaptor/store main) [:account/id user-uuid])))]
       (is (= user-email email))
-      (is (= 1 (-> (kv-adaptor/read-table main env :address/id) count))))
+      (is (= 1 (-> (kv-database/read-table-idents main :address/id)
+                   count))))
     (kv-database/destructive-reset main (all-tables!) (all-entities!))))
+
+(defn x-1
+  "Hmm - memory db not very helpful here, as no automatic seeding when call directly like this"
+  []
+  (let [{:keys [main]} (kv-database/start config/config)]
+    (<!! (k/get-in (kv-adaptor/store main) [:address/id]))))

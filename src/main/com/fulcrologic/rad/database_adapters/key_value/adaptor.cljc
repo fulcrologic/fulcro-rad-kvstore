@@ -48,111 +48,25 @@
   (-k-options [this])
   (-k-store [this]))
 
-;;
-;; Will be removed when Konserve takes over
-;; H is for historical
-;;
-(defprotocol KeyStoreH
-  (-read-table [this env table])
-  (-read* [this env idents])
-  (-read1 [this env ident])
-  (-write* [this env pairs-of-ident-map])
-  (-write1 [this env ident m])
-  (-remove1 [this env ident])
-  (-instance-name [this])
-  (-options [this])
-  (-store [this]))
-
 (defn key-store? [x]
-  (or (satisfies? KeyStoreH x)
-      (satisfies? KeyStoreK x)))
+  (satisfies? KeyStoreK x))
 
 (s/def ::key-store key-store?)
-
-(>defn read*
-  "Returns the entities associated with the sequence of idents asked for. Is not recursive, so just returns what is at
-  the locations, with join values as idents or vectors of idents. A plural version of `::read1`. Both `::read1` and
-  `::read*` are used internally by `::kv-entity-read/read-tree`"
-  [this env idents]
-  [::key-store map? ::key-value/idents => (s/coll-of map? :kind vector?)]
-  (-read* this env idents))
-
-(>defn read1
-  "Returns the entity associated with an ident. Not recursive, so just returns what is at the ident's location,
-  with join values as idents or vectors of idents. See `::kv-entity-read/read-tree` for a recursive way to read
-  entities from the Key Value store.
-  Example use. Here the customer id is being found:
-
-    (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
-        :invoice/customer
-        second)"
-  [this env ident]
-  [::key-store map? ::key-value/ident => (? map?)]
-  (-read1 this env ident))
-
-(>defn read-table
-  "Returns the rows associated with a table keyword in the form of a vector of idents.
-  Usually used in conjunction with `::kv-entity-read/read-tree(-hof)`, which takes an ident as input.
-  For example:
-
-    (let [read-tree (kv-entity-read/read-tree-hof db env)]
-      (->> (kv-adaptor/read-table db env :account/id)
-           (map read-tree)
-           (filterv :account/active?)))
-
-  In the (relatively rare) case where your resolver requires all the rows of the table you will need to morph the
-  output to be what Pathom is expecting, a collection of `::key-value/ident-like-map`
-  For example:
-
-    (->> (kv-adaptor/read-table db env :category/id)
-         (mapv (fn [[table id]] {table id})))
-
-  This operation is not what Key Value stores are meant for. If you have not set `:key-value/table-kludge?` to
-  true then this operation will not be supported (`MemoryKeyStore` excepted). Efficient querying is database vendor
-  specific. This function is meant for quick demos. Turn off `:key-value/table-kludge?` for anything serious.
-  There are product specific recommendations/functionality for running queries, if that's what you need to do"
-  [this env table]
-  [::key-store map? ::key-value/table => (s/coll-of ::key-value/ident :kind vector?)]
-  (-read-table this env table))
-
-(>defn write*
-  "Submit entities to be stored, in the form [[ident entity]...], where ident is [table id] and the entity is a map"
-  [this env pairs-of-ident-map]
-  [::key-store map? ::key-value/pairs-of-ident-map => any?]
-  (-write* this env pairs-of-ident-map))
-
-(>defn write1
-  "Submit an entity to be stored, [ident entity], where ident key is [table id] and the entity is a map"
-  [this env ident m]
-  [::key-store map? ::key-value/ident map? => any?]
-  (-write1 this env ident m))
-
-(>defn remove1
-  "Remove an ident from storage"
-  [this env ident]
-  [::key-store map? ::key-value/ident => any?]
-  (-remove1 this env ident))
 
 (>defn instance-name
   "A human readable identifier for this KeyStore. This identifier was set at the time of `KeyStore` creation"
   [this]
   [::key-store => string?]
-  (if (satisfies? KeyStoreH this)
-    (-instance-name this)
-    (-k-instance-name this)))
+  (-k-instance-name this))
 
 (>defn options
   "Options (all boolean so far) that were set at the time of `KeyStore` creation"
   [this]
   [::key-store => map?]
-  (if (satisfies? KeyStoreH this)
-    (-options this)
-    (-k-options this)))
+  (-k-options this))
 
 (>defn store
   "Return the store that can read and write from. Only Konserve needs to call this"
   [this]
   [::key-store => any?]
-  (if (satisfies? KeyStoreH this)
-    (-store this)
-    (-k-store this)))
+  (-k-store this))

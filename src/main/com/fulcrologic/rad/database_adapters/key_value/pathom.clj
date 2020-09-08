@@ -15,9 +15,9 @@
     [com.fulcrologic.rad.authorization :as auth]
     [edn-query-language.core :as eql]
     [clojure.spec.alpha :as s]
+    [konserve.core :as k]
+    [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-    [com.fulcrologic.rad.database-adapters.key-value.write-k :as kv-write-k]
-    [com.fulcrologic.rad.database-adapters.key-value.pathom-k :as pathom-k]
     [taoensso.timbre :as log]
     [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
 
@@ -72,13 +72,25 @@
                       all-keys)]
     schemas))
 
+(defn unwrap-id
+  "Generate an id. You need to pass a `suggested-id` as a UUID or a tempid. If it is a tempid and the ID column is a UUID, then
+  the UUID *from* the tempid will be used."
+  [{::attr/keys [key->attribute] :as env} k suggested-id]
+  (let [{::attr/keys [type]} (key->attribute k)]
+    (cond
+      (= :uuid type) (cond
+                       (tempid/tempid? suggested-id) (:id suggested-id)
+                       (uuid? suggested-id) suggested-id
+                       :else (throw (ex-info "Only unwrapping of tempid/uuid is supported" {:id suggested-id})))
+      :otherwise (throw (ex-info "Cannot generate an ID for non-uuid ID attribute" {:attribute k})))))
+
 (defn tempids->generated-ids
   "Copied from or very similar to datomic function of same name"
   [{::attr/keys [key->attribute] :as env} delta]
   (let [idents (keys delta)
         fulcro-tempid->generated-id (into {} (keep (fn [[k id :as ident]]
                                                      (when (tempid/tempid? id)
-                                                       [id (pathom-k/unwrap-id env k id)])) idents))]
+                                                       [id (unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
 (defn tempids-in-delta [delta]
@@ -148,15 +160,12 @@
                   ;connection (-> env ::key-value/connections (get schema))
                   [connection kind] (context-f schema ::key-value/connections env)
                   {:keys [tempid->string
-                          tempid->generated-id]} (delta->tempid-maps env delta)
-                  write-delta (if (kv-database/konserve-stores kind)
-                                kv-write-k/write-delta
-                                kv-write/write-delta)]]
+                          tempid->generated-id]} (delta->tempid-maps env delta)]]
       (log/debug "Saving form delta" (with-out-str (pprint delta)))
       (log/debug "on schema" schema)
       (if connection
         (try
-          (write-delta connection env delta)
+          (kv-write/write-delta connection env delta)
           (let [tempid->real-id (into {}
                                       (map (fn [tempid] [tempid (get tempid->generated-id tempid)]))
                                       (keys tempid->string))]
@@ -180,7 +189,7 @@
                {:keys [::attr/schema]} (key->attribute pk)
                connection (-> env ::key-value/connections (get schema))]
               (do
-                (kv-adaptor/remove1 connection env ident)
+                (<!! (k/update (kv-database/->store connection) pk dissoc id))
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
 
@@ -214,19 +223,18 @@
    (fn [{::form/keys [params] :as pathom-env}]
      (delete-entity! pathom-env params))))
 
-(defn read-compact
-  "Reads once from the database using `::kv-adaptor/read1` then transforms the ident joins into /id only (ident-like) maps"
-  [ks env ident]
-  (let [entity (kv-adaptor/read1 ks env ident)]
-    (when entity
-      (into {}
-            (map (fn [[k v]]
-                   (if (nil? v)
-                     (do
-                       (log/warn "`::kv-pathom/read-compact` nil value in database for attribute" k)
-                       [k v])
-                     [k ((pathom-k/idents->value-hof env) v)])))
-            entity))))
+(>defn idents->value-hof
+  "reference is an ident or a vector of idents, or a scalar (in which case not a reference). Does not do any database
+  reading, just changes [table id] to {table id}"
+  [env]
+  [map? => fn?]
+  (fn [reference]
+    (cond
+      (eql/ident? reference) (let [[table id] reference]
+                               {table id})
+      (vector? reference) (let [recurse-f (idents->value-hof env)]
+                            (mapv recurse-f reference))
+      :else reference)))
 
 (defn entity-query
   "Performs the query of the Key Value database. Uses the id-attribute that needs to be resolved and the input to the
@@ -243,9 +251,24 @@
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
           idents (mapv (fn [id]
-                         [qualified-key (pathom-k/unwrap-id env qualified-key id)])
+                         [qualified-key (unwrap-id env qualified-key id)])
                        ids)]
-      (let [result (mapv #(read-compact db env %) idents)]
+      ;; TODO Don't mapv over, go-loop over!
+      ;; We don't care about order, just want them all at once
+      (let [result (mapv (fn [ident]
+                           (<!!
+                             (go
+                               (let [entity (<! (k/get-in (kv-adaptor/store db) ident))]
+                                 (when entity
+                                   (into {}
+                                         (map (fn [[k v]]
+                                                (if (nil? v)
+                                                  (do
+                                                    (log/warn "`::kv-pathom/read-compact` nil value in database for attribute" k)
+                                                    [k v])
+                                                  [k ((idents->value-hof env) v)])))
+                                         entity))))))
+                         idents)]
         (if one?
           (first result)
           result)))))
@@ -314,10 +337,7 @@
      ::pc/batch?  true
      ::pc/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
                             (log/debug "In resolver:" qualified-key "inputs:" input)
-                            (let [[db kind :as context] (context-f :production ::key-value/databases env)
-                                  entity-query (if (kv-database/konserve-stores kind)
-                                                 pathom-k/entity-query
-                                                 entity-query)]
+                            (let [[db kind :as context] (context-f :production ::key-value/databases env)]
                               (->> (entity-query
                                      (assoc env
                                        ::attr/schema schema
