@@ -5,11 +5,10 @@
     [taoensso.timbre :as log]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [konserve.core :as k]
-    [clojure.core.async :as async :refer [<!! <! chan go go-loop]]))
+    [clojure.core.async :refer [<!! <! go]]))
 
 (defn env->db [env]
-  (let [[db kind :as context] (kv-pathom/context-f :production ::key-value/databases env)]
-    db))
+  (kv-pathom/key-store-f :production ::key-value/databases env))
 
 (defn get-all-accounts
   [env query-params]

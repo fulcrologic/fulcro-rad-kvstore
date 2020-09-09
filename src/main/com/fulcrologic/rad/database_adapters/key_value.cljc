@@ -27,31 +27,28 @@
 
   In this namespace references that are input and output are always idents."
   (:require
-    [clojure.spec.alpha :as s]))
+    [clojure.spec.alpha :as s]
+    [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]))
 
 (def key-store? (every-pred map? :store :instance-name))
 
 (s/def ::key-store key-store?)
 
-(def id-keyword? #(and (namespace %) (= "id" (name %))))
+(s/def ::idents (s/coll-of ::strict-entity/ident :kind vector?))
 
-(s/def ::id-keyword id-keyword?)
+(s/def ::entity map?)
 
-(s/def ::table id-keyword?)
-
-(s/def ::ident (s/tuple ::table uuid?))
-
-(s/def ::idents (s/coll-of ::ident :kind vector?))
-
-(s/def ::pair (s/tuple ::ident map?))
+(s/def ::pair (s/tuple ::strict-entity/ident ::entity))
 
 (s/def ::pairs-of-ident-map (s/coll-of ::pair))
 
-(s/def ::tables (s/coll-of ::table :kind vector?))
+(s/def ::tables (s/coll-of ::strict-entity/table :kind vector?))
 
-(s/def ::table-id-entity-3-tuple (s/tuple ::table uuid? map?))
+(s/def ::rows (s/coll-of ::entity :kind vector?))
 
-(s/def ::ident-s-or-table (s/or :ident ::ident
+(s/def ::table-id-entity-3-tuple (s/tuple ::strict-entity/table uuid? map?))
+
+(s/def ::ident-s-or-table (s/or :ident ::strict-entity/ident
                                 :idents ::idents
-                                :table ::table))
+                                :table ::strict-entity/table))
 

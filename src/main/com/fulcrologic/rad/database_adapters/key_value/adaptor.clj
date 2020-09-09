@@ -1,16 +1,61 @@
-(ns com.fulcrologic.rad.database-adapters.key-value.database
-  "A namespace for anything to do with the whole database, for instance importing and exporting..."
+(ns com.fulcrologic.rad.database-adapters.key-value.adaptor
+  ""
   (:require
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
+    [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
+    [com.fulcrologic.rad.ids :refer [new-uuid]]
+    [konserve.core :as k]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [com.fulcrologic.rad.database-adapters.key-value.konserve :as konserve-adaptor]
     [konserve.filestore :refer [new-fs-store]]
     [konserve.memory :refer [new-mem-store]]
     [konserve-carmine.core :refer [new-carmine-store]]
     [clojure.core.async :as async :refer [<!! chan go go-loop]]
     [clojure.spec.alpha :as s]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]))
+
+;;
+;; There are supposed to be bang versions
+;; https://github.com/replikativ/konserve/issues/24
+;; So not need to <!! here every time
+;;
+
+(>defn table-rows
+  [store table]
+  [any? ::strict-entity/table => ::key-value/rows]
+  (vec (vals (<!! (k/get-in store [table])))))
+
+(>defn table-ident-rows
+  [store table]
+  [any? ::strict-entity/table => ::key-value/idents]
+  (->> (keys (<!! (k/get-in store [table])))
+       (mapv (fn [id] [table id]))))
+
+(>defn ident->entity
+  [store ident]
+  [any? ::strict-entity/ident => ::key-value/entity]
+  (<!! (k/get-in store ident)))
+
+(>defn write-entity
+  [store entity]
+  [any? ::key-value/entity => any?]
+  (<!! (k/assoc-in store (strict-entity/entity->ident entity) entity)))
+
+(comment
+  "Destructure like this and pass `store` to any k/ function"
+  {:keys [store table-rows table-ident-rows ident->entity write-entity]})
+
+(>defn make-key-store
+  [store instance-name options]
+  [map? string? map? => map?]
+  {:store store
+   :instance-name instance-name
+   :options options
+   :table-rows (partial table-rows store)
+   :table-ident-rows (partial table-ident-rows store)
+   :ident->entity (partial ident->entity store)
+   :write-entity (partial write-entity store)})
 
 (>defn start
   "Returns a map containing only one database - the `:main` one.
@@ -28,17 +73,20 @@
     (when (nil? kind)
       (throw (ex-info ":kind not found in :main database\n" {:database main-database})))
     {:main (case kind
-             :filestore (let [{:filestore/keys [location]} main-database
-                              store (<!! (new-fs-store location))]
-                          (konserve-adaptor/make-konserve-key-store
-                            store (str "Konserve fs at " location) main-database))
-             :redis (let [{:redis/keys [uri]} main-database
-                          store (<!! (new-carmine-store uri))]
-                      (konserve-adaptor/make-konserve-key-store
-                        store (str "Konserve redis at " uri) main-database))
-             :memory (let [store (<!! (new-mem-store))]
-                       (konserve-adaptor/make-konserve-key-store
-                         store (str "Konserve memory store") main-database))
+             :filestore (let [{:filestore/keys [location]} main-database]
+                          (make-key-store
+                            (<!! (new-fs-store location))
+                            (str "Konserve file store at " location)
+                            main-database))
+             :redis (let [{:redis/keys [uri]} main-database]
+                      (make-key-store
+                        (<!! (new-carmine-store uri))
+                        (str "Konserve Redis at " uri)
+                        main-database))
+             :memory (make-key-store
+                       (<!! (new-mem-store))
+                       (str "Konserve memory store")
+                       main-database)
              )}))
 
 ;;

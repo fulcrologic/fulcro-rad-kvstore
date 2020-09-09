@@ -9,7 +9,7 @@
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.type-support.date-time :as dt]
-    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]))
 
 (defn all-tables!
   "All the tables that we are going to have entities of. This information is in the RAD registry, we just haven't gone
@@ -71,7 +71,7 @@
   [::key-value/key-store => any?]
   (dt/set-timezone! "America/Los_Angeles")
   (println "SEEDING data (Starting fresh). For" instance-name)
-  (kv-database/destructive-reset connection (all-tables!) (all-entities!)))
+  (kv-adaptor/destructive-reset connection (all-tables!) (all-entities!)))
 
 ;;
 ;; We've got a tiny database so let's seed it every time we refresh
@@ -80,6 +80,6 @@
 ;;
 (defstate kv-connections
   "The connection to the database that has just been freshly populated"
-  :start (let [{:keys [main] :as databases} (kv-database/start config/config)]
+  :start (let [{:keys [main] :as databases} (kv-adaptor/start config/config)]
            (seed! main)
            databases))

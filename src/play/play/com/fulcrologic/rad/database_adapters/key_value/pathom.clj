@@ -3,6 +3,7 @@
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
+    [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
@@ -10,8 +11,15 @@
     [com.example.model :refer [all-attributes]]
     [general.dev :as dev]
     [com.example.components.config :as config]
-    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
-    [com.fulcrologic.fulcro.algorithms.tempid :as tempid]))
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+    [clojure.core.async :as async :refer [<!! go]]
+    [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
+    [mount.core :as mount]))
+
+(defn env-db []
+  (mount/start)
+  (let [conn (:main kv-connections)]
+    [{::key-value/databases {:production (atom conn)}} conn]))
 
 (defn x-1 []
   (let [retire-erick {[:account/id (new-uuid 100)]
@@ -22,8 +30,18 @@
     (assert (seq schemas) "No schemas")
     schemas))
 
+(defn x-2 []
+  (let [[env {:keys [store table-rows] :as db}] (env-db)
+        idents [[:address/id (new-uuid 1)][:address/id (new-uuid 300)]]
+        entities (<!! (async/into [] (kv-pathom/idents->entities-chan db idents)))]
+    (dev/pp entities)))
+
+(defn x-3 []
+  (let [[env {:keys [store table-rows] :as db}] (env-db)]
+    (dev/pp (table-rows :account/id))))
+
 (defn alter-existing-user []
-  (let [{:keys [main]} (kv-database/start config/config)
+  (let [{:keys [main]} (kv-adaptor/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -61,7 +79,7 @@
 (defn add-new-user []
   (let [user-tempid (tempid/tempid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9")
         address-tempid (tempid/tempid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16")
-        {:keys [main]} (kv-database/start config/config)
+        {:keys [main]} (kv-adaptor/start config/config)
         delta (new-user-delta user-tempid address-tempid)
         key->attribute (attr/attribute-map all-attributes)
         env {::attr/key->attribute   key->attribute

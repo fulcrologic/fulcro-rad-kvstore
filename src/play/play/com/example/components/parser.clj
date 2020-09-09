@@ -7,7 +7,7 @@
     [com.example.model :refer [all-attributes]]
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
+    [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
@@ -68,7 +68,7 @@
     instance-name))
 
 (defn entire-db []
-  (dev/pp (kv-database/export (conn) (env) (all-tables!))))
+  (dev/pp (kv-adaptor/export (conn) (env) (all-tables!))))
 
 (defn test-remove-all []
   (kv-write/remove-table-rows! (conn) (env) :account/id))
@@ -79,26 +79,26 @@
       (kv-write/remove-table-rows! db (env) table))))
 
 (defn all-addresses []
-  (let [{:keys [read-table]} (conn)]
-    (read-table :address/id)))
+  (let [{:keys [table-rows]} (conn)]
+    (table-rows :address/id)))
 
 (defn all-line-items []
-  (let [{:keys [read-table]} (conn)]
-    (read-table :line-item/id)))
+  (let [{:keys [table-rows]} (conn)]
+    (table-rows :line-item/id)))
 
 (defn all-accounts []
-  (let [{:keys [read-table]} (conn)]
-    (dev/pp (read-table :account/id))))
+  (let [{:keys [table-rows]} (conn)]
+    (dev/pp (table-rows :account/id))))
 
 (defn every-line-item-expanded []
-  (let [{:keys [read-table]} (conn)]
-    (->> (read-table :line-item/id)
+  (let [{:keys [table-rows]} (conn)]
+    (->> (table-rows :line-item/id)
          dev/pp)))
 
 (defn all-item-ids-where-cat-id []
-  (let [{:keys [read-table]} (conn)
+  (let [{:keys [table-rows]} (conn)
         toys-cat-id (new-uuid 1002)]
-    (->> (read-table :item/id)
+    (->> (table-rows :item/id)
          (filterv #(#{toys-cat-id} (-> % :item/category second)))
          dev/pp)))
 
@@ -110,8 +110,8 @@
 ;       [?c :account/id ?cid]] db id)
 (defn all-invoices-of-an-account []
   (let [cid (new-uuid 103)
-        {:keys [read-table]} (conn)]
-    (->> (read-table :invoice/id)
+        {:keys [table-rows]} (conn)]
+    (->> (table-rows :invoice/id)
          (filterv #(= cid (-> % :invoice/customer second)))
          dev/pp)))
 
@@ -123,25 +123,25 @@
 ;       [?c :account/id ?account-uuid]] db invoice-id)
 
 (defn given-invoice-get-customer []
-  (let [{:keys [read-table]} (conn)]
-    (-> (rand-nth (read-table :invoice/id))
+  (let [{:keys [table-rows]} (conn)]
+    (-> (rand-nth (table-rows :invoice/id))
         :invoice/customer)))
 
 (defn given-line-item-get-category []
-  (let [{:keys [read-table-idents ident->entity]} (conn)
-        li-ident (rand-nth (read-table-idents :line-item/id))
+  (let [{:keys [table-ident-rows ident->entity]} (conn)
+        li-ident (rand-nth (table-ident-rows :line-item/id))
         i-id (-> (ident->entity li-ident) :line-item/item second)
         c-id (-> (ident->entity [:item/id i-id]) :item/category second)]
     c-id))
 
 (defn alter-test []
-  (let [{:keys [read-table write-entity]} (conn)
-        active-accounts-1 (->> (read-table :account/id)
+  (let [{:keys [table-rows write-entity]} (conn)
+        active-accounts-1 (->> (table-rows :account/id)
                                (filter :account/active?))
         altered-account (assoc (rand-nth active-accounts-1) :account/active? false)
         num-active-1 (count active-accounts-1)]
     (write-entity altered-account)
-    (let [active-accounts-2 (->> (read-table :account/id)
+    (let [active-accounts-2 (->> (table-rows :account/id)
                                  (filter :account/active?))
           num-active-2 (count active-accounts-2)]
       [num-active-1 num-active-2])))

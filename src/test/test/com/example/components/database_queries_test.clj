@@ -6,9 +6,7 @@
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
-    [mount.core :as mount]
-    [konserve.core :as k]
-    [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]))
+    [mount.core :as mount]))
 
 (deftest always-passes
   (let [amount 1000]
@@ -65,15 +63,15 @@
 
 (deftest customer-on-an-invoice
   (let [env (env)
-        {:keys [read-table-idents]} (:main kv-connections)
-        iident (my-rand-nth (read-table-idents :invoice/id))
+        {:keys [table-ident-rows]} (:main kv-connections)
+        iident (my-rand-nth (table-ident-rows :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
-        {:keys [read-table-idents]} (:main kv-connections)
-        li-ident (my-rand-nth (read-table-idents :line-item/id))
+        {:keys [table-ident-rows]} (:main kv-connections)
+        li-ident (my-rand-nth (table-ident-rows :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 

@@ -1,6 +1,6 @@
 (ns test.com.fulcrologic.rad.database-adapters.key-value.pathom-test
   (:require [clojure.test :refer :all]
-            [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
+            [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
             [com.example.components.seeded-connection :refer [all-tables! all-entities!]]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
@@ -17,7 +17,7 @@
             [konserve.core :as k]))
 
 (deftest alter-existing
-  (let [{:keys [main]} (kv-database/start config/config)
+  (let [{:keys [main]} (kv-adaptor/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -36,7 +36,7 @@
           retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
       (is (false? (:account/active? retired-erick))))
-    (kv-database/destructive-reset main (all-tables!) (all-entities!))))
+    (kv-adaptor/destructive-reset main (all-tables!) (all-entities!))))
 
 (defn new-user-delta [user-tempid address-tempid email-address]
   {[:account/id user-tempid]
@@ -59,7 +59,7 @@
         user-tempid (tempid/tempid user-uuid)
         address-uuid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
         address-tempid (tempid/tempid address-uuid)
-        {:keys [main]} (kv-database/start config/config)
+        {:keys [main]} (kv-adaptor/start config/config)
         email "chris@somemail.com.au"
         delta (new-user-delta user-tempid address-tempid email)
         key->attribute (attr/attribute-map all-attributes)
@@ -71,24 +71,24 @@
         ;; going with the one database, and not even sure if Redis supports just creating databases out of thin air
         ;; the way Datomic can
         ;;
-        _ (kv-database/destructive-reset main (all-tables!))
+        _ (kv-adaptor/destructive-reset main (all-tables!))
         tempids-map (kv-pathom/save-form! env {::form/delta delta})
         user-in-tempids (get (:tempids tempids-map) user-tempid)
         address-in-tempids (get (:tempids tempids-map) address-tempid)
-        {:keys [ident->entity read-table-idents]} main]
+        {:keys [ident->entity table-ident-rows]} main]
     (is user-in-tempids)
     (is address-in-tempids)
     (is (= user-in-tempids user-uuid))
     (is (= address-in-tempids address-uuid))
     (let [user-email (:account/email (ident->entity [:account/id user-uuid]))]
       (is (= user-email email))
-      (is (= 1 (-> (read-table-idents :address/id)
+      (is (= 1 (-> (table-ident-rows :address/id)
                    count))))
-    (kv-database/destructive-reset main (all-tables!) (all-entities!))))
+    (kv-adaptor/destructive-reset main (all-tables!) (all-entities!))))
 
 (defn x-1
   "Hmm - memory db not very helpful here, as no automatic seeding when call directly like this"
   []
-  (let [{:keys [main]} (kv-database/start config/config)
+  (let [{:keys [main]} (kv-adaptor/start config/config)
         {:keys [store]} main]
     (<!! (k/get-in store [:address/id]))))
