@@ -15,7 +15,7 @@ things as documents with keys.
 
 This Fulcro RAD plugin with adaptors is in development and is not yet ready for production.
 
-A recent copy of the https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo] source code is included. So the
+A recent copy of the https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo] source code is included. So
 this project's source code makes up the first three steps here:
 
  RAD Demo -> Key Value plugin -> ::key-value/key-store -> :store -> Redis | Firebase | MongoDB ...
@@ -57,13 +57,14 @@ The RAD Demo is at `com.example`.
 
 == Introduction
 
-This Fulcro RAD Key Value store adaptor library reads and writes data to a https://github.com/replikativ/konserve[Konserve]
+This library allows Fulcro RAD to read and write to a https://github.com/replikativ/konserve[Konserve]
 Key Store database. Supporting a new database may mean a trivial 'include it' fix to
 this library, or contributing to Konserve. For example at time of writing MongoDB
 was not supported by Konserve.
 
-Entities are always stored with key being a stricter version (identifier has to be `/id` and its value a `uuid?`) of
-`eql/ident?` and the value a map of attributes, where the attribute values are either scalars or references. A
+.Entities are always stored with:
+- key being a stricter version of `eql/ident?` (specifically table has to be a `/id` keyword and the second part a `uuid?`)
+- value being a map of attributes, where the attribute values are either scalars or references. A
 reference can be either an ident or a vector of idents.
 
 == Creation
@@ -79,8 +80,8 @@ the standard RAD configuration files to drive what is created call `::kv-key-sto
   {:keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
 
 The easiest way to get started is to use these functions directly. All bar one of them are for retrieving entities.
-`ident->entity` returns what is stored at an ident, which will be a single entity map where all references are
-idents. Here is how you would get all the active accounts (from the Demo project):
+For example `ident->entity` returns what is stored at an ident, and `table->rows` returns all the data of a table.
+Here is how you would get all the active accounts (from the Demo project):
 
   (->> (table->rows :account/id)
        (filter :account/active?)
@@ -94,7 +95,8 @@ Here's one way you could do the same thing using Konserve's store directly:
              (filter :account/active?)
              (mapv #(select-keys % [:account/id])))))
 
-Here both are equally async, but when there are many fetches prefer to use `store` directly.
+Here both are equally 'async', but when there are many fetches you are going to get better performance using
+`store` directly.
 
 Additionally there are some useful functions in the `::kv-write` namespace: `::write-tree` and
 `::remove-table-rows`. And in the `::kv-key-store` namespace: `export` and `import`.
@@ -133,7 +135,7 @@ Additionally there are some useful functions in the `::kv-write` namespace: `::w
 |===
 
 An area of integration not included on this table is where your hand written resolvers need to query the
-database. Here the queries will be passed the Pathom `env`, which can be passed to the function
+database. Here the queries will be passed the Pathom `env`, which can then be passed to the function
 `kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key-store
 in hand you can use one of the pre-written functions the map contains or use Konserve directly, as explained under
 the heading 'Functions'.
