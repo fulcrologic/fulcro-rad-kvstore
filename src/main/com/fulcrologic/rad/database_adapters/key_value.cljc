@@ -19,7 +19,7 @@
 
   However you wouldn't create directly like this if using from RAD. Instead set one of your databases to be the `:main`
   one in a configuration file (defaults.edn in the example project) and have a mount `defstate` that calls
-  `::kv-adaptor/start`. See the Demo project.
+  `::kv-key-store/start`. See the Demo project.
 
   `make-key-store` returns a `::key-value/keystore` which is a simple map that can be destructured:
 

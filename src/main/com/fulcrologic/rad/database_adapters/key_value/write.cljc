@@ -191,7 +191,7 @@
   Theoretically at return time just go through the delta grab all ids that are Fulcro tempids.
   Then generate a table using tempid->uuid.
   However tempid handling already being done outside this function, so just returning {}.
-  For writing to our db we can just unwrap tempids, seen here in postwalk"
+  For writing to our store we can just unwrap tempids, seen here in postwalk"
   [{:keys [store options]} env delta]
   [::key-value/key-store map? map? => map?]
   (let [dont-store-nils? (:key-value/dont-store-nils? options)

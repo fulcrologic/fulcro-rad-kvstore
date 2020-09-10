@@ -1,4 +1,4 @@
-(ns com.fulcrologic.rad.database-adapters.key-value.adaptor
+(ns com.fulcrologic.rad.database-adapters.key-value.key-store
   "The 'adaptor' is the value of the key `:store` in ::key-value/key-store (a simple map). The specs are
   at ::key-value. We create the simple map here. Also other existential things like filling with data or getting all
   the data out. The word 'store' is what Konserve always uses in its documentation. It is their adaptor we are using"
@@ -96,7 +96,7 @@
   Also (unlike the datomic implementation) note that attributes are not passed in because there is no schema with Key
   Value databases, hence no automatic schema generation is possible"
   [{::key-value/keys [databases]}]
-  [map? => map?]
+  [map? => ::key-value/key-store]
   (let [{:key-value/keys [kind dont-store-nils?]
          :or             {dont-store-nils? false}
          :as             main-database} (:main databases)]
@@ -104,22 +104,22 @@
       (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
     (when (nil? kind)
       (throw (ex-info ":kind not found in :main database\n" {:database main-database})))
-    {:main (case kind
-             :filestore (let [{:filestore/keys [location]} main-database]
-                          (make-key-store
-                            (<!! (new-fs-store location))
-                            (str "Konserve file store at " location)
-                            main-database))
-             :redis (let [{:redis/keys [uri]} main-database]
-                      (make-key-store
-                        (<!! (new-carmine-store uri))
-                        (str "Konserve Redis at " uri)
-                        main-database))
-             :memory (make-key-store
-                       (<!! (new-mem-store))
-                       (str "Konserve memory store")
-                       main-database)
-             )}))
+    (case kind
+      :filestore (let [{:filestore/keys [location]} main-database]
+                   (make-key-store
+                     (<!! (new-fs-store location))
+                     (str "Konserve file store at " location)
+                     main-database))
+      :redis (let [{:redis/keys [uri]} main-database]
+               (make-key-store
+                 (<!! (new-carmine-store uri))
+                 (str "Konserve Redis at " uri)
+                 main-database))
+      :memory (make-key-store
+                (<!! (new-mem-store))
+                (str "Konserve memory store")
+                main-database)
+      )))
 
 (>defn export
   "Sometimes useful to see the whole database at once"

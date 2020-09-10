@@ -15,10 +15,10 @@ things as documents with keys.
 
 This Fulcro RAD plugin with adaptors is in development and is not yet ready for production.
 
-A RAD Key Value Database plugin uses the adaptor. In turn this plugin is used by a recent copy of the
-https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
+A recent copy of the https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo] source code is included. So the
+this project's source code makes up the first three steps here:
 
- RAD Demo -> Key Value plugin -> Key Value adaptor -> Redis | Firebase | MongoDB ...
+ RAD Demo -> Key Value plugin -> ::key-value/key-store -> :store -> Redis | Firebase | MongoDB ...
 
 Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database has
 `:key-value/kind` of `:memory` or `:filestore`. We don't want to have to install Redis just yet.
@@ -36,11 +36,11 @@ compilation is complete refresh the browser at http://localhost:3000/. The Demo 
 
 The following namespace aliases are used in the content of this document:
 
-[source, clojure]
+[source,clojure]
 -----
 (ns x
   (:require
-     [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
+     [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
      [com.example.components.config :as config]
@@ -66,15 +66,21 @@ Entities are always stored with key being a stricter version (identifier has to 
 `eql/ident?` and the value a map of attributes, where the attribute values are either scalars or references. A
 reference can be either an ident or a vector of idents.
 
+== Creation
+
+To create a `::key-value/key-store` you could call `::kv-key-store/make-key-store` directly. However if you want
+the standard RAD configuration files to drive what is created call `::kv-key-store/start` with that configuration.
+`::key-value/key-store` is just a simple map. `:store` inside this map is where the real Konserve adaptor is located.
+
 == Functions
 
-A `::key-value/key-store` is a simple map that can be destructured:
+`::key-value/key-store` can be destructured:
 
   {:keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
 
-The easiest way to get started is to use these functions directly. `ident->entity` returns what is stored at
-the ident - a single entity map where all references are idents. Here is how you would get all the
-active accounts (from the Demo project):
+The easiest way to get started is to use these functions directly. All bar one of them are for retrieving entities.
+`ident->entity` returns what is stored at an ident, which will be a single entity map where all references are
+idents. Here is how you would get all the active accounts (from the Demo project):
 
   (->> (table->rows :account/id)
        (filter :account/active?)
@@ -88,22 +94,20 @@ Here's one way you could do the same thing using Konserve's store directly:
              (filter :account/active?)
              (mapv #(select-keys % [:account/id])))))
 
-Here both are equally async, but when there are many fetches tend to use `store` directly.
+Here both are equally async, but when there are many fetches prefer to use `store` directly.
 
 Additionally there are some useful functions in the `::kv-write` namespace: `::write-tree` and
-`::remove-table-rows`. And in the `::kv-adaptor` namespace: `export` and `import`.
+`::remove-table-rows`. And in the `::kv-key-store` namespace: `export` and `import`.
 
 == RAD Integration
 
-As with all RAD Database plugins:
+.As with all RAD Database plugins:
+- It comes with delete and save middleware so you don't have to write your own Pathom mutations.
+- Is capable of generating the 'id -> entity' Pathom resolvers.
+- Injects values into the Pathom `env` that are then picked up by these resolvers.
+- Has a function to start the plugin that picks up values set in the RAD configuration.
 
-* Comes with delete and save middleware so you don't have to write your own
-Pathom mutations.
-* Is capable of generating the 'id -> entity' Pathom resolvers.
-* Injects values into the Pathom `env` that are then picked up by these resolvers.
-* Has a function to start the plugin that picks up values set in the RAD configuration.
-
-.Entry points from RAD Demo into RAD plugin
+.Entry points from RAD Demo into Key Value plugin
 |===
 |Description |Demo Mount component |Function call
 
@@ -125,7 +129,7 @@ Pathom mutations.
 
 |Create connection
 |`::config/config`,`com.example.components.seeded-connection/kv-connections`
-|`::kv-adaptor/start`
+|`::kv-key-store/start`
 |===
 
 An area of integration not included on this table is where your hand written resolvers need to query the
@@ -157,7 +161,7 @@ Konserve directly!
 The last significant thing this plugin lacks is the useful function
 `::datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
 just the data they need, not touching existing databases. The closest we have is
-`::kv-adaptor/import` which requires an existing database and can be used to destroy the existing data (so not
+`::kv-key-store/import` which requires an existing database and can be used to destroy the existing data (so not
 actually importing anything).
 
 == Redis Installation
