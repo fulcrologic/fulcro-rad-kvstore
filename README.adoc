@@ -43,6 +43,7 @@ The following namespace aliases are used in the content of this document:
      [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
+     [com.fulcrologic.rad.database-adapters.datomic :as datomic]
      [com.example.components.config :as config]
      [com.example.components.delete-middleware :as delete]
      [com.example.components.save-middleware :as save]
@@ -52,15 +53,14 @@ The following namespace aliases are used in the content of this document:
      ))
 -----
 
-The namespaces for the plugin and the adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
+The namespaces for the plugin are `::kv-write` and `::kv-pathom`.
 The RAD Demo is at `com.example`.
 
 == Introduction
 
-This library allows Fulcro RAD to read and write to a https://github.com/replikativ/konserve[Konserve]
-Key Store database. Supporting a new database may mean a trivial 'include it' fix to
-this library, or contributing to Konserve. For example at time of writing MongoDB
-was not supported by Konserve.
+This library allows Fulcro RAD to read and write to a https://github.com/replikativ/konserve[Konserve]-supported
+key value database. Thus supporting a new database may mean a trivial 'include it' fix here, or contributing to
+Konserve in the first instance. For example at time of writing MongoDB was not supported by Konserve.
 
 .Entities are always stored with:
 - key being a stricter version of `eql/ident?` (specifically table has to be a `/id` keyword and the second part a `uuid?`)
@@ -69,8 +69,8 @@ reference can be either an ident or a vector of idents.
 
 == Creation
 
-To create a `::key-value/key-store` you could call `::kv-key-store/make-key-store` directly. However if you want
-the standard RAD configuration files to drive what is created call `::kv-key-store/start` with that configuration.
+To create a `::key-value/key-store` you could call `kv-key-store/make-key-store` directly. However if you want
+the standard RAD configuration files to drive what is created call `kv-key-store/start` with that configuration.
 `::key-value/key-store` is just a simple map. `:store` inside this map is where the real Konserve adaptor is located.
 
 == Functions
@@ -96,10 +96,10 @@ Here's one way you could do the same thing using Konserve's store directly:
              (mapv #(select-keys % [:account/id])))))
 
 Here both are equally 'async', but when there are many fetches you are going to get better performance using
-`store` directly.
+`:store` directly.
 
-Additionally there are some useful functions in the `::kv-write` namespace: `::write-tree` and
-`::remove-table-rows`. And in the `::kv-key-store` namespace: `export` and `import`.
+Additionally there are some useful functions in the `::kv-write` namespace: `write-tree` and
+`remove-table-rows`. And in the `::kv-key-store` namespace: `export` and `import`.
 
 == RAD Integration
 
@@ -115,28 +115,28 @@ Additionally there are some useful functions in the `::kv-write` namespace: `::w
 
 |Generation of Pathom resolvers
 |`com.example.components.auto-resolvers/automatic-resolvers`
-|`::kv-pathom/generate-resolvers`
+|`kv-pathom/generate-resolvers`
 
 |Save Middleware
 |`::save/middleware`
-|`::kv-pathom/wrap-save`
+|`kv-pathom/wrap-save`
 
 |Delete Middleware
 |`::delete/middleware`
-|`::kv-pathom/wrap-delete`
+|`kv-pathom/wrap-delete`
 
-|What the Pathom `env` requires
+|Injection into Pathom's `env`
 |`::parser/parser`
-|`::kv-pathom/pathom-plugin`
+|`kv-pathom/pathom-plugin`
 
 |Create connection
 |`::config/config`,`com.example.components.seeded-connection/kv-connections`
-|`::kv-key-store/start`
+|`kv-key-store/start`
 |===
 
 An area of integration not included on this table is where your hand written resolvers need to query the
-database. Here the queries will be passed the Pathom `env`, which can then be passed to the function
-`kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key-store
+database. Here queries will receive `env`, which they can then pass to the function
+`kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key store
 in hand you can use one of the pre-written functions the map contains or use Konserve directly, as explained under
 the heading 'Functions'.
 
@@ -161,9 +161,9 @@ automatic Pathom resolver generation then this plugin can be used outside of RAD
 Konserve directly!
 
 The last significant thing this plugin lacks is the useful function
-`::datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
+`datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
 just the data they need, not touching existing databases. The closest we have is
-`::kv-key-store/import` which requires an existing database and can be used to destroy the existing data (so not
+`kv-key-store/import` which requires an existing database and can be used to destroy the existing data (so not
 actually importing anything).
 
 == Redis Installation
