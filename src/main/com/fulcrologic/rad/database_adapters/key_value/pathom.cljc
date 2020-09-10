@@ -132,7 +132,7 @@
 (>defn env->key-store
   "Find the keystore from the Pathom env, optionally given a schema and whether required from connections or databases"
   ([env schema kv-entry]
-   [keyword? keyword? map? => ::key-value/key-store]
+   [map? keyword? keyword? => ::key-value/key-store]
    (if-let [{:keys [options] :as key-store} (cond
                                               (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
                                               (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
@@ -142,6 +142,7 @@
        key-store)
      (log/error (str "No database atom for schema: " schema))))
   ([env]
+   [map? => ::key-value/key-store]
    (env->key-store env :production ::key-value/databases)))
 
 (declare context)

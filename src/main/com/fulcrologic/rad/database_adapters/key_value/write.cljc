@@ -10,8 +10,7 @@
             [clojure.walk :as walk]
             [konserve.core :as k]
             [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
-            [clojure.core.async :as async :refer [<!! chan go go-loop]]
-            ))
+            [clojure.core.async :as async :refer [<!! chan go go-loop]]))
 
 (>defn ident-of
   "Used when composing data to be stored. When a join is a reference (this function returns an ident reference) you
@@ -134,7 +133,7 @@
   data. As long as the input is coherent all the references should be respected. See
   `com.example.components.seeded-connection/seed!` for example usage."
   [{:keys [store]} m]
-  [::key-value/key-store map? map? => any?]
+  [::key-value/key-store map? => any?]
   (let [entries (flatten m)]
     (<!! (go-loop [entries entries]
            (when-let [[ident m] (first entries)]

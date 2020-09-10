@@ -14,11 +14,11 @@
                                     {:main      {:key-value/kind             :memory
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production}
-                                     :ignored-3 {:key-value/kind             :filestore
+                                     :ignored-1 {:key-value/kind             :filestore
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production
                                                  :filestore/location         "/tmp/fulcro_rad_demo_db"}
-                                     :ignored-4 {:key-value/kind             :redis
+                                     :ignored-2 {:key-value/kind             :redis
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production
                                                  :redis/uri                  "redis://127.0.0.1:6379/"}

@@ -15,8 +15,6 @@ things as documents with keys.
 
 This Fulcro RAD plugin with adaptors is in development and is not yet ready for production.
 
-This project currently consists of two implementations of the Key Value adaptor - in memory via a Clojure atom and Redis.
-
 A RAD Key Value Database plugin uses the adaptor. In turn this plugin is used by a recent copy of the
 https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
 
@@ -27,8 +25,9 @@ Take a look inside `/src/demo-project/config/defaults.edn` just to check that th
 
 In a terminal type `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the installation. For the
 server side setup a REPL choosing 'Run with Deps' with the alias `dev`. Optionally set 'JVM Args'
-to `-Dguardrails.enabled=true`. Bring the REPL up. `(user/refresh)` will reload the namespaces and `(user/restart)` will
-get the Demo's dependency graph of Mount components up and running.
+to `-Dguardrails.enabled=true`. Bring the REPL up. `(user/refresh)` will reload the namespaces (compilation step)
+and `(user/restart)` will get the Demo's dependency graph of Mount components up and running, which includes seeding
+the database.
 
 Back to the client. Bring up a browser tab at http://localhost:9630/ and start a watch on the `:main` build. When
 compilation is complete refresh the browser at http://localhost:3000/. The Demo Application should now be working.
@@ -63,8 +62,8 @@ Key Store database. Supporting a new database may mean a trivial 'include it' fi
 this library, or contributing to Konserve. For example at time of writing MongoDB
 was not supported by Konserve.
 
-Entities are always stored with key being an
-`eql/ident` and the value a map of attributes, where the attribute values are either scalars or references. A
+Entities are always stored with key being a stricter version (identifier has to be `/id` and its value a `uuid?`) of
+`eql/ident?` and the value a map of attributes, where the attribute values are either scalars or references. A
 reference can be either an ident or a vector of idents.
 
 == Functions
@@ -73,7 +72,7 @@ A `::key-value/key-store` is a simple map that can be destructured:
 
   {:keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
 
-The simplest way to get started is to use these functions directly. `ident->entity` returns what is stored at
+The easiest way to get started is to use these functions directly. `ident->entity` returns what is stored at
 the ident - a single entity map where all references are idents. Here is how you would get all the
 active accounts (from the Demo project):
 
@@ -89,17 +88,20 @@ Here's one way you could do the same thing using Konserve's store directly:
              (filter :account/active?)
              (mapv #(select-keys % [:account/id])))))
 
-Here both are equally async, but when things get more interesting choose to use `store` directly.
+Here both are equally async, but when there are many fetches tend to use `store` directly.
 
 Additionally there are some useful functions in the `::kv-write` namespace: `::write-tree` and
 `::remove-table-rows`. And in the `::kv-adaptor` namespace: `export` and `import`.
 
 == RAD Integration
 
-The Key Value RAD plugin comes with delete and save middleware so you don't have to write your own
-Pathom mutations. It is capable of generating the 'fill in the entity attributes' Pathom resolvers.
-It injects values into the Pathom `env` that are then picked up by these resolvers.
-There is a function to start the plugin that picks up values set in the RAD configuration.
+As with all RAD Database plugins:
+
+* Comes with delete and save middleware so you don't have to write your own
+Pathom mutations.
+* Is capable of generating the 'id -> entity' Pathom resolvers.
+* Injects values into the Pathom `env` that are then picked up by these resolvers.
+* Has a function to start the plugin that picks up values set in the RAD configuration.
 
 .Entry points from RAD Demo into RAD plugin
 |===
@@ -140,15 +142,15 @@ Even although the Pathom `env` of this plugin has `::key-value/connections` and 
 one connection/database is ever used. (With this type of database there is no difference between a connection and a
 database). So with current functionality we could get away with just having `::key-value/database`.
 The Datomic plugin requires this setup to support sharding, which has been left undone for the Key Value plugin.
-Note that even if invented a new key such as `::key-value/database` to go in the `env`, we could still keep
+Note that even if we invented a new key such as `::key-value/database` to go into the `env`, we could still keep
 `::key-value/databases` in the config file. You'll probably never need to worry about all this however,
-as the function `kv-pathom/env->key-store` abstracts it away, and you will usually be editing an `.edn` config
-files rather than creating it from scratch.
+as the function `kv-pathom/env->key-store` abstracts it away, and you'll usually be editing `.edn` config
+files rather than creating them from scratch.
 
 There is no automatic schema generation. Unlike Datomic, Key Value databases do not have schemas to generate.
 
 This plugin currently eschews looking to RAD attributes to ascertain the primary key of entities, instead making
-the assumption that your schema strictly adheres to each entity instance having one '/id' attribute. Thus if you do not need
+the assumption that your entities are strict (according to the namespace `::strict-entity`). Thus if you do not need
 automatic Pathom resolver generation then this plugin can be used outside of RAD. Of course you can also always use
 Konserve directly!
 

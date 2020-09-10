@@ -67,7 +67,7 @@
 
 (s/def ::pair (s/tuple ::strict-entity/ident ::entity))
 
-(s/def ::pairs-of-ident-map (s/coll-of ::pair))
+(s/def ::pairs-of-ident-map (s/coll-of ::pair :kind vector))
 
 (s/def ::tables (s/coll-of ::strict-entity/table))
 
