@@ -32,7 +32,7 @@
                           (map new-uuid)
                           (map (fn [id] {:account/id id}))
                           set)
-        result-set (set (queries/get-all-accounts (env) {:show-inactive? false}))]
+        result-set (set (queries/get-all-accounts-2 (env) {:show-inactive? false}))]
     (is (= (set expected-set) result-set))
     ;(dev/pp result-set)
     ))
@@ -63,15 +63,15 @@
 
 (deftest customer-on-an-invoice
   (let [env (env)
-        {:keys [table-ident-rows]} (:main kv-connections)
-        iident (my-rand-nth (table-ident-rows :invoice/id))
+        {:keys [table->ident-rows]} (:main kv-connections)
+        iident (my-rand-nth (table->ident-rows :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
-        {:keys [table-ident-rows]} (:main kv-connections)
-        li-ident (my-rand-nth (table-ident-rows :line-item/id))
+        {:keys [table->ident-rows]} (:main kv-connections)
+        li-ident (my-rand-nth (table->ident-rows :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 

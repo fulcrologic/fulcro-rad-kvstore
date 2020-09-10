@@ -3,6 +3,7 @@
   (:require
     [clojure.pprint :refer [pprint]]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.form :as form]
     [com.wsscode.pathom.core :as p]
@@ -19,7 +20,7 @@
     [taoensso.timbre :as log]))
 
 (defn pathom-plugin
-  "A pathom plugin that adds the necessary `KeyStore` connections/databases (same thing) to the pathom env for
+  "A pathom plugin that adds the necessary ::key-value connections/databases (same thing) to the pathom env for
   a given request. Requires a database-mapper, which is a
   `(fn [pathom-env] {schema-name connection})` for a given request.
 
@@ -87,7 +88,9 @@
                                                        [id (unwrap-id env k id)])) idents))]
     fulcro-tempid->generated-id))
 
-(defn tempids-in-delta [delta]
+(defn tempids-in-delta
+  "delta is key-ed by ident, so easy to find all the ids that are tempid-s"
+  [delta]
   (into #{} (keep (fn [[table id :as ident]]
                     (when (tempid/tempid? id)
                       id))
@@ -110,21 +113,6 @@
      :tempid->generated-id tempid->generated-id}))
 
 ;;
-;; Need kv-entry either ::key-value/databases or ::key-value/connections
-;; Although no difference between them!
-;;
-(>defn key-store-f
-  [schema kv-entry env]
-  [keyword? keyword? map? => ::key-value/key-store]
-  (if-let [{:keys [options] :as key-store} (cond
-                                             (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
-                                             (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
-    (if-not (s/valid? ::key-value/key-store key-store)
-      (throw (ex-info "db is not a KeyStore" {:db key-store}))
-      key-store)
-    (log/error (str "No database atom for schema: " schema))))
-
-;;
 ;; TODO
 ;; Currently the atom is serving no purpose with only one connection.
 ;; Is only one connection fine?
@@ -135,6 +123,27 @@
 ;; a database - the goal is to have it work same as the Datomic database adapter - support multiple databases at
 ;; runtime.
 ;;
+
+;;
+;; Need kv-entry either ::key-value/databases or ::key-value/connections
+;; Although no difference between them!
+;; (This copying of Datomic code is leading to farcical results, hence above TODO)
+;;
+(>defn env->key-store
+  "Find the keystore from the Pathom env, optionally given a schema and whether required from connections or databases"
+  ([env schema kv-entry]
+   [keyword? keyword? map? => ::key-value/key-store]
+   (if-let [{:keys [options] :as key-store} (cond
+                                              (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
+                                              (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
+     (if-not (s/valid? ::key-value/key-store key-store)
+       (throw (ex-info "Not a `::key-value/key-store`" {:key-store key-store
+                                                        :env-keys (keys env)}))
+       key-store)
+     (log/error (str "No database atom for schema: " schema))))
+  ([env]
+   (env->key-store env :production ::key-value/databases)))
+
 (declare context)
 (defn save-form!
   "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
@@ -144,7 +153,7 @@
     (log/debug "Saving form across " schemas)
     (doseq [schema schemas
             :let [
-                  key-store (key-store-f schema ::key-value/connections env)
+                  key-store (env->key-store env schema ::key-value/connections)
                   {:keys [tempid->string
                           tempid->generated-id]} (delta->tempid-maps env delta)]]
       (log/debug "Saving form delta" (with-out-str (pprint delta)))
@@ -220,7 +229,9 @@
                           (mapv idents->value reference))
     :else reference))
 
-(defn transform-entity [entity]
+(defn transform-entity
+  "Transform so all the joins are no longer idents but ident-like entity maps"
+  [entity]
   (into {}
         (map (fn [[k v]]
                (if (nil? v)
@@ -230,50 +241,26 @@
                  [k (idents->value v)])))
         entity))
 
-(>defn idents->entities-chan
-  [{:keys [store]} idents]
-  [::key-value/key-store ::key-value/idents => any?]
-  (let [out (chan (count idents))]
-    (go
-      (loop [idents idents]
-        (when-let [ident (first idents)]
-          (let [entity (<! (k/get-in store ident))]
-            (if entity
-              (>! out entity)
-              (log/warn "Could not find an entity from ident" ident))
-            (recur (next idents)))))
-      (close! out))
-    out))
-
-(defn entity-query
+(>defn entity-query
   "Performs the query of the Key Value database. Uses the id-attribute that needs to be resolved and the input to the
   resolver which will contain the id/s that need to be queried for"
   [{::key-value/keys [id-attribute]
     ::attr/keys      [schema attributes]
     :as              env}
    input
-   db]
+   {:keys [ids->entities]}]
+  [map? any? ::key-value/key-store => any?]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))]
     (let [ids (if one?
                 [(get input qualified-key)]
                 (into [] (keep #(get % qualified-key)) input))
-          idents (mapv (fn [id]
-                         [qualified-key (unwrap-id env qualified-key id)])
-                       ids)]
-      (let [entities (<!! (async/into [] (idents->entities-chan db idents)))
+          ids (map #(unwrap-id env qualified-key %) ids)]
+      (let [entities (ids->entities qualified-key ids)
             result (mapv transform-entity entities)]
         (if one?
           (first result)
           result)))))
-
-(defn first-identity-hof [k->a]
-  (fn [ast-nodes]
-    (->> ast-nodes
-         (filter (fn [{:keys [dispatch-key]}]
-                   (some-> dispatch-key k->a ::attr/identity?)))
-         first
-         :key)))
 
 (>defn fix-id-keys
   "Fix the ID keys recursively on result."
@@ -325,7 +312,7 @@
      ::pc/batch?  true
      ::pc/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
                             (log/debug "In resolver:" qualified-key "inputs:" input)
-                            (let [key-store (key-store-f :production ::key-value/databases env)]
+                            (let [key-store (env->key-store env :production ::key-value/databases)]
                               (->> (entity-query
                                      (assoc env
                                        ::attr/schema schema

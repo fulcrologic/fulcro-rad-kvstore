@@ -1,5 +1,6 @@
 (ns com.fulcrologic.rad.database-adapters.strict-entity
-  "Entities that have a strict definition of their id (/id and uuid?) are strict entities"
+  "Entities that have a strict definition of their ids (/id for the identifying attribute and uuid? for its value)
+  are strict entities"
   (:require
     [edn-query-language.core :as eql]
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -12,7 +13,9 @@
 
 (s/def ::table id-keyword?)
 
-(s/def ::ident (s/tuple ::table uuid?))
+(s/def ::id uuid?)
+
+(s/def ::ident (s/tuple ::table ::id))
 
 (defn id-attribute-f
   "Obtains the /id attribute from an entity"

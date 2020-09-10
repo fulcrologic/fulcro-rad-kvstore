@@ -14,7 +14,7 @@
     {::key-value/databases {:production (atom conn)}}))
 
 (defn x-1 []
-  (dev/pp (queries/get-all-accounts (env) {})))
+  (dev/pp (queries/get-all-accounts-2 (env) {})))
 
 (defn x-2 []
   (dev/pp (queries/get-all-items (env) {:category/id (new-uuid 1000)})))

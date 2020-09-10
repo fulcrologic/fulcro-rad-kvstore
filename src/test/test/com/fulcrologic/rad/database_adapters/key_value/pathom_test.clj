@@ -24,7 +24,7 @@
                                 :account/primary-address (value-of (seed/new-address (new-uuid 300) "222 Other"))
                                 :time-zone/zone-id :time-zone.zone-id/America-Los_Angeles)]
     (doseq [[table id value] [address erick]]
-      (kv-write/write-tree main {} value))
+      (kv-write/write-tree main value))
     (let [retire-erick {[:account/id (new-uuid 100)]
                         {:account/active? {:before true, :after false}}}
           key->attribute (attr/attribute-map all-attributes)
@@ -36,7 +36,7 @@
           retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
       (is (false? (:account/active? retired-erick))))
-    (kv-adaptor/destructive-reset main (all-tables!) (all-entities!))))
+    (kv-adaptor/import main (all-tables!) (all-entities!))))
 
 (defn new-user-delta [user-tempid address-tempid email-address]
   {[:account/id user-tempid]
@@ -68,23 +68,24 @@
         ;;
         ;; Hmm - not ideal. Needed because Redis is a real database. We need to implement what the Datomic Adaptor
         ;; has: pristine-db-connection / empty-db-connection (same thing as we no schema). So far I've always been
-        ;; going with the one database, and not even sure if Redis supports just creating databases out of thin air
-        ;; the way Datomic can
+        ;; going with the one database, and doubt Redis supports just creating databases out of thin air
+        ;; the way Datomic does...
         ;;
-        _ (kv-adaptor/destructive-reset main (all-tables!))
+        _ (kv-adaptor/import main (all-tables!))
         tempids-map (kv-pathom/save-form! env {::form/delta delta})
-        user-in-tempids (get (:tempids tempids-map) user-tempid)
-        address-in-tempids (get (:tempids tempids-map) address-tempid)
-        {:keys [ident->entity table-ident-rows]} main]
+        tempids (:tempids tempids-map)
+        user-in-tempids (get tempids user-tempid)
+        address-in-tempids (get tempids address-tempid)
+        {:keys [ident->entity table->ident-rows]} main]
     (is user-in-tempids)
     (is address-in-tempids)
     (is (= user-in-tempids user-uuid))
     (is (= address-in-tempids address-uuid))
     (let [user-email (:account/email (ident->entity [:account/id user-uuid]))]
       (is (= user-email email))
-      (is (= 1 (-> (table-ident-rows :address/id)
+      (is (= 1 (-> (table->ident-rows :address/id)
                    count))))
-    (kv-adaptor/destructive-reset main (all-tables!) (all-entities!))))
+    (kv-adaptor/import main (all-tables!) (all-entities!))))
 
 (defn x-1
   "Hmm - memory db not very helpful here, as no automatic seeding when call directly like this"

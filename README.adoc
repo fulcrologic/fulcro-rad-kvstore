@@ -22,8 +22,8 @@ https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo].
 
  RAD Demo -> Key Value plugin -> Key Value adaptor -> Redis | Firebase | MongoDB ...
 
-Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database is
-`:clojure-atom`. We don't want to have to install Redis just yet.
+Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database has
+`:key-value/kind` of `:memory` or `:filestore`. We don't want to have to install Redis just yet.
 
 In a terminal type `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the installation. For the
 server side setup a REPL choosing 'Run with Deps' with the alias `dev`. Optionally set 'JVM Args'
@@ -42,9 +42,7 @@ The following namespace aliases are used in the content of this document:
 (ns x
   (:require
      [com.fulcrologic.rad.database-adapters.key-value.adaptor :as kv-adaptor]
-     [com.fulcrologic.rad.database-adapters.key-value.entity-read :as kv-entity-read]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-     [com.fulcrologic.rad.database-adapters.key-value.database :as kv-database]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
      [com.example.components.config :as config]
      [com.example.components.delete-middleware :as delete]
@@ -58,17 +56,43 @@ The following namespace aliases are used in the content of this document:
 The namespaces for the plugin and the adaptor are both under `com.fulcrologic.rad.database-adapters.key-value`.
 The RAD Demo is at `com.example`.
 
+== Introduction
+
+This Fulcro RAD Key Value store adaptor library reads and writes data to a https://github.com/replikativ/konserve[Konserve]
+Key Store database. Supporting a new database may mean a trivial 'include it' fix to
+this library, or contributing to Konserve. For example at time of writing MongoDB
+was not supported by Konserve.
+
+Entities are always stored with key being an
+`eql/ident` and the value a map of attributes, where the attribute values are either scalars or references. A
+reference can be either an ident or a vector of idents.
+
 == Functions
 
-The protocol is `::kv-adaptor/KeyStore` and has methods such as `::kv-adaptor/read1` and `::kv-adaptor/write1`. `read1` accepts
-an ident and returns a map (entity) where all the joins are idents. `write1` accepts those two (ident, map) as arguments. There
-are also plural versions of these methods: `read*` and `write*`. To avoid the inconvenience of dealing with idents
-you may prefer to use the functions `::kv-entity-read/read-tree` and `::kv-write/write-tree`.
-`read-tree` will fully expand the ident you give it into tree form by making calls to `read1` and `read*`.
-All the joins will have become maps or vectors of maps - so no idents.
-`write-tree` will do the opposite, deconstructing a tree structure and calling `write*`.
+A `::key-value/key-store` is a simple map that can be destructured:
 
-Please see the Demo for uses of these functions, and read the doc strings for further details.
+  {:keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
+
+The simplest way to get started is to use these functions directly. `ident->entity` returns what is stored at
+the ident - a single entity map where all references are idents. Here is how you would get all the
+active accounts (from the Demo project):
+
+  (->> (table->rows :account/id)
+       (filter :account/active?)
+       (mapv #(select-keys % [:account/id])))
+
+Here's one way you could do the same thing using Konserve's store directly:
+
+    (<!!
+      (go
+        (->> (vals (<! (k/get-in store [:account/id])))
+             (filter :account/active?)
+             (mapv #(select-keys % [:account/id])))))
+
+Here both are equally async, but when things get more interesting choose to use `store` directly.
+
+Additionally there are some useful functions in the `::kv-write` namespace: `::write-tree` and
+`::remove-table-rows`. And in the `::kv-adaptor` namespace: `export` and `import`.
 
 == RAD Integration
 
@@ -99,12 +123,14 @@ There is a function to start the plugin that picks up values set in the RAD conf
 
 |Create connection
 |`::config/config`,`com.example.components.seeded-connection/kv-connections`
-|`::kv-database/start`
+|`::kv-adaptor/start`
 |===
 
-One last area of integration not included on this table is where your hand written resolvers need to query the
-database. Here the queries will be passed the Pathom `env` - so they can grab the connection. With the connection
-in hand a query can call functions from the namespaces `::kv-adaptor` and `::kv-entity-read`.
+An area of integration not included on this table is where your hand written resolvers need to query the
+database. Here the queries will be passed the Pathom `env`, which can be passed to the function
+`kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key-store
+in hand you can use one of the pre-written functions the map contains or use Konserve directly, as explained under
+the heading 'Functions'.
 
 == Comparison with Datomic Database plugin
 
@@ -114,41 +140,23 @@ Even although the Pathom `env` of this plugin has `::key-value/connections` and 
 one connection/database is ever used. (With this type of database there is no difference between a connection and a
 database). So with current functionality we could get away with just having `::key-value/database`.
 The Datomic plugin requires this setup to support sharding, which has been left undone for the Key Value plugin.
-Note that even if we switched to using `::key-value/database` in the `env`, we could still keep `::key-value/databases`
-in the config file.
+Note that even if invented a new key such as `::key-value/database` to go in the `env`, we could still keep
+`::key-value/databases` in the config file. You'll probably never need to worry about all this however,
+as the function `kv-pathom/env->key-store` abstracts it away, and you will usually be editing an `.edn` config
+files rather than creating it from scratch.
 
 There is no automatic schema generation. Unlike Datomic, Key Value databases do not have schemas to generate.
 
 This plugin currently eschews looking to RAD attributes to ascertain the primary key of entities, instead making
 the assumption that your schema strictly adheres to each entity instance having one '/id' attribute. Thus if you do not need
-automatic Pathom resolver generation then this plugin can be used outside of RAD. You just need to take over the
-creation of the adaptor (rather than calling `::kv-database/start`):
-
-  (redis-adaptor/->RedisKeyStore {:pool {} :spec {:uri "redis://127.0.0.1:6379/"}} options)
+automatic Pathom resolver generation then this plugin can be used outside of RAD. Of course you can also always use
+Konserve directly!
 
 The last significant thing this plugin lacks is the useful function
 `::datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
 just the data they need, not touching existing databases. The closest we have is
-`::kv-database/destructive-reset` which requires an existing database and destroys data.
-
-== Queries
-
-Key Value databases are all about storing information at a location and retrieving it back again. There is no
-concept of tables or retrieving data from them according to some predicate logic. Despite this, and merely to
-get the Demo working, a method called `::kv-adaptor/read-table` is part of this adaptor. You will need to
-set `:key-value/table-kludge?` to true in order to get it to work. This is an option to the creation of
-any `::kv-adaptor/KeyStore`, set when using RAD via the .edn configuration files.
-
-We just show a couple of example queries from the Demo. All queries are called from custom Pathom resolvers.
-
- (let [read-tree (kv-entity-read/read-tree-hof db env)]
-      (->> (kv-adaptor/read-table db env :account/id)
-           (map read-tree)
-           (filter :account/active?)))
-
- (-> (kv-adaptor/read1 db env [:invoice/id invoice-id])
-     :invoice/customer
-     second)
+`::kv-adaptor/import` which requires an existing database and can be used to destroy the existing data (so not
+actually importing anything).
 
 == Redis Installation
 

@@ -89,7 +89,7 @@
           ao/pc-output  [{:account/all-accounts [:account/id]}]
           ao/pc-resolve (fn [{:keys [query-params] :as env} _]
                           #?(:clj
-                             {:account/all-accounts (queries/get-all-accounts env query-params)}))})
+                             {:account/all-accounts (queries/get-all-accounts-2 env query-params)}))})
 
 (defattr account-invoices :account/invoices :ref
          {ao/target     :account/id

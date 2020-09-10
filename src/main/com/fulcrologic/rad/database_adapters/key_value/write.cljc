@@ -1,6 +1,6 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.write
-  "All entry points for writing to a ::kv-adaptor/KeyStoreH or K that are outside the protocol itself. `::write-tree` and
-  `::remove-table-rows` are the ones to be familiar with"
+  "All entry points for writing to `:store` inside `::key-value/key-store` that involve more than one entity.
+  `::write-tree` and `::remove-table-rows` are the ones to be familiar with"
   (:refer-clojure :exclude [flatten])
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
@@ -133,7 +133,7 @@
   "Writing will work whether given denormalized or normalized. Use this function to seed/import large amounts of
   data. As long as the input is coherent all the references should be respected. See
   `com.example.components.seeded-connection/seed!` for example usage."
-  [{:keys [store]} env m]
+  [{:keys [store]} m]
   [::key-value/key-store map? map? => any?]
   (let [entries (flatten m)]
     (<!! (go-loop [entries entries]

@@ -31,14 +31,14 @@
     schemas))
 
 (defn x-2 []
-  (let [[env {:keys [store table-rows] :as db}] (env-db)
-        idents [[:address/id (new-uuid 1)][:address/id (new-uuid 300)]]
-        entities (<!! (async/into [] (kv-pathom/idents->entities-chan db idents)))]
+  (let [[env {:keys [ids->entities]}] (env-db)
+        ids [(new-uuid 1) #_(new-uuid 300)]
+        entities (ids->entities :address/id ids)]
     (dev/pp entities)))
 
 (defn x-3 []
-  (let [[env {:keys [store table-rows] :as db}] (env-db)]
-    (dev/pp (table-rows :account/id))))
+  (let [[env {:keys [store table->rows] :as db}] (env-db)]
+    (dev/pp (table->rows :account/id))))
 
 (defn alter-existing-user []
   (let [{:keys [main]} (kv-adaptor/start config/config)
@@ -48,7 +48,7 @@
                                 :account/primary-address (value-of (seed/new-address (new-uuid 300) "222 Other"))
                                 :time-zone/zone-id :time-zone.zone-id/America-Los_Angeles)]
     (doseq [[table id value] [address erick]]
-      (kv-write/write-tree main {} value))
+      (kv-write/write-tree main value))
     (let [retire-erick {[:account/id (new-uuid 100)]
                         {:account/active? {:before true, :after false}}}
           key->attribute (attr/attribute-map all-attributes)

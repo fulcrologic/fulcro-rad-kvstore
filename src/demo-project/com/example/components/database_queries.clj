@@ -8,9 +8,19 @@
     [clojure.core.async :refer [<!! <! go]]))
 
 (defn env->db [env]
-  (kv-pathom/key-store-f :production ::key-value/databases env))
+  (kv-pathom/env->key-store env :production ::key-value/databases))
 
-(defn get-all-accounts
+(comment (<!!
+           (go
+             (->> (vals (<! (k/get-in store [:account/id])))
+                  (filter :account/active?)
+                  (mapv #(select-keys % [:account/id]))))))
+
+(comment (->> (table->rows :account/id)
+              (filter :account/active?)
+              (mapv #(select-keys % [:account/id]))))
+
+(defn get-all-accounts-1
   [env query-params]
   (when-let [{:keys [store]} (env->db env)]
     (<!!
@@ -21,6 +31,16 @@
           (->> (vals (<! (k/get-in store [:account/id])))
                (filter :account/active?)
                (mapv #(select-keys % [:account/id]))))))))
+
+(defn get-all-accounts-2
+  [env query-params]
+  (when-let [{:keys [table->ident-rows table->rows]} (env->db env)]
+    (if (:show-inactive? query-params)
+      (->> (table->ident-rows :account/id)
+           (mapv (fn [[table id]] {table id})))
+      (->> (table->rows :account/id)
+           (filter :account/active?)
+           (mapv #(select-keys % [:account/id]))))))
 
 (defn get-all-items
   [env {:category/keys [id] :as query-params}]
