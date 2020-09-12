@@ -46,6 +46,8 @@ The following namespace aliases are used in the content of this document:
      [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
+     ;; Don't need an alias to load a ns so the multimethod's defmethod can be found
+     [com.fulcrologic.rad.database-adapters.key-value.redis]
      [com.fulcrologic.rad.database-adapters.datomic :as datomic]
      [com.example.components.config :as config]
      [com.example.components.delete-middleware :as delete]
@@ -66,15 +68,17 @@ Konserve in the first instance. For example at time of writing MongoDB was not s
 
 .Entities are always stored with:
 - key being a stricter version of `eql/ident?` (specifically table has to be a `/id` keyword and the second part a `uuid?`)
-- value being a map of attributes, where the attribute values are either scalars or references. A
+- value being a map of attributes (an entity!), where the attribute values are either scalars or references. A
 reference can be either an ident or a vector of idents.
 
 == Creation
 
-To create a `::key-value/key-store` you could call `key-value/make-key-store` directly. However if you want
-the standard RAD configuration files to drive what is created call `key-value/start` with that configuration.
-`::key-value/key-store` is just a simple map. `::kv-key-store/store` inside this map is where the real Konserve
-adaptor is located.
+To create a `::key-value/key-store` call `key-value/start` passing in the RAD configuration map.
+`::kv-key-store/store` inside the returned map is where the real Konserve
+adaptor is located. Unless the `:kind` of adaptor you are creating is `:memory` or `filestore` make sure you have
+required the namespace associated with the adaptor you are requesting, so the defmethod of the
+`make-konserve-adaptor` multimethod can be found. As mentioned in a comment in the example `:require`, there is no
+need for an alias.
 
 == Functions
 
@@ -184,16 +188,20 @@ for example.
 == Deployment
 
 A maven artifact is a jar file (with context) stored in a maven repository.
-There needs to be one for each adaptor.
-There is no need for any kind of 'base' jar.
-There doesn't need to be a jar for this repo, so `fulcro-rad-kvstore.jar` will not exist.
-Use an existing maven artifact. These instructions are for maintainers.
+There will be a base artifact (`fulcro-rad-kvstore.jar`) and one for each substantial adaptor:
+`:memory` and `:filestore` will be covered by the base artifact.
+
+Please use an existing maven artifact. We will list them when they exist.
+These instructions are for maintainers.
 
 We will create a Redis jar file as an example. The actual deployment to maven under the `com.fulcrologic` groupId
 needs to be done by an authorized person.
 Multiple `pom.xml` files will be kept in this repo, but none of them named `pom.xml`. The idea is that you copy to
 `pom.xml` as part of the instructions. So `pom_redis.xml` for
-`fulcro-rad-kvstore-redis` etc. Every adaptor will have its own `pom_<adaptor-name>.xml`.
+`fulcro-rad-kvstore-redis.jar` etc. Every adaptor will have its own `pom_<adaptor-name>.xml`. The base jar will be
+no different to any of the others, so we will have `pom_base.xml`.
+Is there a better way?? Once this gets the go ahead I'll put together `pom_base.xml` and `pom_redis.xml`. We are
+giving up possible generation from deps alias'.
 
 .Deployment instructions:
 - Update pom_redis.xml with the new version and copy it over pom.xml.

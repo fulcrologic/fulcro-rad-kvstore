@@ -175,11 +175,13 @@
   {::kv-key-store/keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]})
 
 (>defn start
-  "Returns a map containing only one database - the `:main` one.
-  Not like the datomic implementation of the same function, that will return many databases.
-  So many databases can be in the config file, and switch one of them to be `:main`
-  Also (unlike the datomic implementation) note that attributes are not passed in because there is no schema with Key
-  Value databases, hence no automatic schema generation is possible"
+  "Given a configuration map `start` returns a `::key-store`.
+  It calls the multimethod `make-konserve-adaptor`, so make sure you have required the namespace that has the defmethod.
+  This won't be an issue for `:kind` values `:memory` or `filestore`, as their defmethod-s are right here in this ns.
+
+  Many databases can be in the config file. All except the `:main` one are just there for reference.
+  Note that (unlike the datomic implementation) attributes are not passed into this function because there's no
+  schema with Key Value databases, hence no automatic schema generation is possible"
   [{::keys [databases]}]
   [map? => ::key-store]
   (let [{:key-value/keys [kind dont-store-nils?]
