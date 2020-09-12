@@ -7,11 +7,11 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [com.fulcrologic.rad.attributes :as attr]
     [com.example.model :refer [all-attributes]]
     [general.dev :as dev]
     [com.example.components.config :as config]
-    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [clojure.core.async :as async :refer [<!! go]]
     [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
     [mount.core :as mount]))
@@ -41,7 +41,7 @@
     (dev/pp (table->rows :account/id))))
 
 (defn alter-existing-user []
-  (let [key-store (kv-key-store/start config/config)
+  (let [key-store (key-value/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -56,7 +56,7 @@
                ::key-value/connections {:production key-store}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          {:keys [ident->entity]} key-store
+          {::kv-key-store/keys [ident->entity]} key-store
           retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (dev/pp [tempids-map (:account/active? retired-erick)]))))
 
@@ -79,7 +79,7 @@
 (defn add-new-user []
   (let [user-tempid (tempid/tempid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9")
         address-tempid (tempid/tempid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16")
-        key-store (kv-key-store/start config/config)
+        key-store (key-value/start config/config)
         delta (new-user-delta user-tempid address-tempid)
         key->attribute (attr/attribute-map all-attributes)
         env {::attr/key->attribute   key->attribute
@@ -87,3 +87,6 @@
         params {::form/delta delta}
         tempids-map (kv-pathom/save-form! env params)]
     (dev/pp tempids-map)))
+
+(defn start []
+  (key-value/start config/config))

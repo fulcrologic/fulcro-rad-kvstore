@@ -1,13 +1,12 @@
-{:paths   ["src/main" "src/demo-project"]
- :deps    {org.clojure/clojure            {:mvn/version "1.10.1" :scope "provided"}
-           com.fulcrologic/fulcro-rad     {:mvn/version "1.0.0-RC1" :scope "provided"}
-           io.replikativ/konserve         {:mvn/version "0.5.1"}
-           io.replikativ/konserve-carmine {:mvn/version "0.1.3"}
+{:paths   ["src/main"]
+ :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
+           com.fulcrologic/fulcro-rad {:mvn/version "1.0.0-RC1" :scope "provided"}
+           io.replikativ/konserve     {:mvn/version "0.5.1"}
            }
- :aliases {:dev       {:extra-paths ["src/dev" "src/play" "resources"]
+ :aliases {:dev       {:extra-paths ["src/dev" "src/play" "resources" "src/redis"]
                        :extra-deps  {org.clojure/tools.namespace            {:mvn/version "1.0.0"}
 
-                                     com.fulcrologic/fulcro                 {:mvn/version "3.2.12"}
+                                     com.fulcrologic/fulcro                 {:mvn/version "3.2.16"}
                                      com.fulcrologic/fulcro-rad-semantic-ui {:mvn/version "0.0.12-alpha"}
                                      com.fulcrologic/fulcro-i18n            {:mvn/version "0.0.4-alpha"}
                                      com.wsscode/pathom                     {:mvn/version "2.3.0-alpha10"}
@@ -35,14 +34,32 @@
 
                                      thheller/shadow-cljs                   {:mvn/version "2.10.21"}
                                      org.clojure/clojurescript              {:mvn/version "1.10.758"}
-                                     cjmurphy/dev-lib                       {:mvn/version "0.1.0"}}}
-           ;; Having demo-project in test makes Cursive (continuously!) mark that directory as testing, hence put up to parent
-           :test      {:extra-paths ["src/test"]
-                       :extra-deps  {mount            {:mvn/version "0.1.12"}
-                                     cjmurphy/dev-lib {:mvn/version "0.1.0"}}}
+                                     cjmurphy/dev-lib                       {:mvn/version "0.1.0"}
+
+                                     ;; Put all the adaptors we support in here
+                                     io.replikativ/konserve-carmine         {:mvn/version "0.1.3"}
+                                     }}
+           ;; Having "src/demo-project" demo-project in 'test' makes Cursive mark that directory as testing on Cursive
+           ;; Clojure Deps Projects refreshes, so INTENTIONAL RENAME to 'tset'. Make sure to have it ('tset') checked
+           ;; in Clojure Deps Projects Aliases. Then 'mark as source' from in the IDE will 'hold' when you
+           ;; 'Refresh Clojure Deps Projects'
+           ;;
+           ;; Note that currently I can run tests when .edn config set to :redis from REPL but not from test runner.
+           ;; Must be because the extra namespace not being loaded. `set-refresh-dirs` does this magic step for us.
+           ;; Maybe Kaocha will be better...
+           :tset      {:extra-paths ["src/test" "src/demo-project" "src/redis"]
+                       :extra-deps  {mount                          {:mvn/version "0.1.12"}
+                                     cjmurphy/dev-lib               {:mvn/version "0.1.0"}
+                                     io.replikativ/konserve-carmine {:mvn/version "0.1.3"}
+                                     }}
            :run-tests {
                        ;:jvm-opts   ["-Dguardrails.enabled=true"]
                        :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                :sha     "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
                        :main-opts  ["-m" "cognitect.test-runner"]}
+           ;; Creates jar files, see README, Deployment
+           :depstar   {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}}
+           ;; Don't actually need extra-deps b/c deps picked up from the pom.xml file. Again see README, Deployment
+           :redis     {:extra-paths ["src/redis"]
+                       :extra-deps  {io.replikativ/konserve-carmine {:mvn/version "0.1.3"}}}
            }}

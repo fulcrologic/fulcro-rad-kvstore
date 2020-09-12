@@ -13,6 +13,7 @@
     [com.fulcrologic.rad.type-support.date-time :as datetime]
     [com.fulcrologic.rad.routing.html5-history :as hist5 :refer [html5-history]]
     [com.fulcrologic.rad.routing.history :as history]
+    [com.fulcrologic.fulcro.algorithms.tx-processing.synchronous-tx-processing :as stx]
     [com.fulcrologic.rad.routing :as routing]
     [com.fulcrologic.fulcro.components :as comp]))
 
@@ -21,7 +22,10 @@
 
 (defonce app (rad-app/fulcro-rad-app
                {:client-did-mount (fn [app]
-                                    (hist5/restore-route! app ui/LandingPage {}))}))
+                                    (hist5/restore-route! app ui/LandingPage {}))
+                ;; Loading indicator in top RH corner going forever
+                ;:submit-transaction! stx/sync-tx!
+                }))
 
 (defn refresh []
   ;; hot code reload of installed controls

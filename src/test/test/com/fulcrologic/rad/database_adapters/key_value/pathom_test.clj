@@ -1,12 +1,12 @@
 (ns test.com.fulcrologic.rad.database-adapters.key-value.pathom-test
   (:require [clojure.test :refer :all]
-            [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
             [com.example.components.seeded-connection :refer [all-tables! all-entities!]]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
             [com.fulcrologic.rad.ids :refer [new-uuid]]
             [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+            [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
             [com.fulcrologic.rad.form :as form]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
@@ -17,7 +17,7 @@
             [konserve.core :as k]))
 
 (deftest alter-existing
-  (let [key-store (kv-key-store/start config/config)
+  (let [key-store (key-value/start config/config)
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -32,11 +32,11 @@
                ::key-value/connections {:production key-store}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
-          {:keys [ident->entity]} key-store
+          {::kv-key-store/keys [ident->entity]} key-store
           retired-erick (ident->entity [:account/id (new-uuid 100)])]
       (is (= {:tempids {}} tempids-map))
       (is (false? (:account/active? retired-erick))))
-    (kv-key-store/import key-store (all-tables!) (all-entities!))))
+    (kv-write/import key-store (all-tables!) (all-entities!))))
 
 (defn new-user-delta [user-tempid address-tempid email-address]
   {[:account/id user-tempid]
@@ -59,7 +59,7 @@
         user-tempid (tempid/tempid user-uuid)
         address-uuid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
         address-tempid (tempid/tempid address-uuid)
-        key-store (kv-key-store/start config/config)
+        key-store (key-value/start config/config)
         email "chris@somemail.com.au"
         delta (new-user-delta user-tempid address-tempid email)
         key->attribute (attr/attribute-map all-attributes)
@@ -71,12 +71,12 @@
         ;; going with the one database, and doubt Redis supports just creating databases out of thin air
         ;; the way Datomic does...
         ;;
-        _ (kv-key-store/import key-store (all-tables!))
+        _ (kv-write/import key-store (all-tables!))
         tempids-map (kv-pathom/save-form! env {::form/delta delta})
         tempids (:tempids tempids-map)
         user-in-tempids (get tempids user-tempid)
         address-in-tempids (get tempids address-tempid)
-        {:keys [ident->entity table->ident-rows]} key-store]
+        {::kv-key-store/keys [ident->entity table->ident-rows]} key-store]
     (is user-in-tempids)
     (is address-in-tempids)
     (is (= user-in-tempids user-uuid))
@@ -85,11 +85,11 @@
       (is (= user-email email))
       (is (= 1 (-> (table->ident-rows :address/id)
                    count))))
-    (kv-key-store/import key-store (all-tables!) (all-entities!))))
+    (kv-write/import key-store (all-tables!) (all-entities!))))
 
 (defn x-1
   "Hmm - memory key-store not very helpful here, as no automatic seeding when call directly like this"
   []
-  (let [key-store (kv-key-store/start config/config)
-        {:keys [store]} key-store]
+  (let [key-store (key-value/start config/config)
+        {::kv-key-store/keys [store]} key-store]
     (<!! (k/get-in store [:address/id]))))

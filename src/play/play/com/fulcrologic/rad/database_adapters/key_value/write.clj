@@ -4,6 +4,12 @@
     [com.fulcrologic.guardrails.core :refer [>defn => ?]]
     [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]))
 
+;;
+;; TODO
+;; Turn into tests and get rid of from here
+;; Can get rid of the play queries at same time (as have tests and can run them individually in REPL)
+;;
+
 (defn x-1 []
   [(kv-write/before-after? {:before :a :after :b})
    (kv-write/before-after? {:before :a :afterwards :b})])

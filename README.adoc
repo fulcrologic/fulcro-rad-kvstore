@@ -18,7 +18,9 @@ This Fulcro RAD plugin with adaptors is in development and is not yet ready for 
 A recent copy of the https://github.com/fulcrologic/fulcro-rad-demo[RAD Demo] source code is included. So
 this project's source code makes up the first three steps here:
 
- RAD Demo -> Key Value plugin -> ::key-value/key-store -> :store -> Redis | Firebase | MongoDB ...
+ RAD Demo -> Key Value plugin -> ::key-value/key-store -> ::kv-key-store/store -> Redis | Firebase | MongoDB ...
+
+`::kv-key-store/store` is the binding for the adaptor supplied by another library.
 
 Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database has
 `:key-value/kind` of `:memory` or `:filestore`. We don't want to have to install Redis just yet.
@@ -40,6 +42,7 @@ The following namespace aliases are used in the content of this document:
 -----
 (ns x
   (:require
+     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
      [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
@@ -53,7 +56,6 @@ The following namespace aliases are used in the content of this document:
      ))
 -----
 
-The namespaces for the plugin are `::kv-write` and `::kv-pathom`.
 The RAD Demo is at `com.example`.
 
 == Introduction
@@ -69,15 +71,16 @@ reference can be either an ident or a vector of idents.
 
 == Creation
 
-To create a `::key-value/key-store` you could call `kv-key-store/make-key-store` directly. However if you want
-the standard RAD configuration files to drive what is created call `kv-key-store/start` with that configuration.
-`::key-value/key-store` is just a simple map. `:store` inside this map is where the real Konserve adaptor is located.
+To create a `::key-value/key-store` you could call `key-value/make-key-store` directly. However if you want
+the standard RAD configuration files to drive what is created call `key-value/start` with that configuration.
+`::key-value/key-store` is just a simple map. `::kv-key-store/store` inside this map is where the real Konserve
+adaptor is located.
 
 == Functions
 
 `::key-value/key-store` can be destructured:
 
-  {:keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
+  {::kv-key-store/keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]}
 
 The easiest way to get started is to use these functions directly. All bar one of them are for retrieving entities.
 For example `ident->entity` returns what is stored at an ident, and `table->rows` returns all the data of a table.
@@ -96,10 +99,10 @@ Here's one way you could do the same thing using Konserve's store directly:
              (mapv #(select-keys % [:account/id])))))
 
 Here both are equally 'async', but when there are many fetches you are going to get better performance using
-`:store` directly.
+`::kv-key-store/store` directly.
 
-Additionally there are some useful functions in the `::kv-write` namespace: `write-tree` and
-`remove-table-rows`. And in the `::kv-key-store` namespace: `export` and `import`.
+Additionally there are some useful functions in the `::kv-write` namespace: `import`,
+`remove-table-rows` and `write-tree`. And in the `::key-value` namespace there is `export`.
 
 == RAD Integration
 
@@ -131,14 +134,13 @@ Additionally there are some useful functions in the `::kv-write` namespace: `wri
 
 |Create connection
 |`::config/config`,`com.example.components.seeded-connection/kv-connections`
-|`kv-key-store/start`
+|`key-value/start`
 |===
 
 An area of integration not included on this table is where your hand written resolvers need to query the
 database. Here queries will receive `env`, which they can then pass to the function
 `kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key store
-in hand you can use one of the pre-written functions the map contains or use Konserve directly, as explained under
-the heading 'Functions'.
+in hand either use one of the pre-written functions the map contains, or use Konserve directly.
 
 == Comparison with Datomic Database plugin
 
@@ -178,6 +180,31 @@ Apart from `com.example.components` and `config`, overwrite all with new files. 
 you might want to check the `.edn` config files. `time-zone` is Datomic-specific so remove it by commenting out
 `timezone/attributes` from `com.example.model` and on whatever UIs TZ appears - in `fo/attributes` in `AccountForm`
 for example.
+
+== Deployment
+
+A maven artifact is a jar file (with context) stored in a maven repository.
+There needs to be one for each adaptor.
+There is no need for any kind of 'base' jar.
+There doesn't need to be a jar for this repo, so `fulcro-rad-kvstore.jar` will not exist.
+Use an existing maven artifact. These instructions are for maintainers.
+
+We will create a Redis jar file as an example. The actual deployment to maven under the `com.fulcrologic` groupId
+needs to be done by an authorized person.
+Multiple `pom.xml` files will be kept in this repo, but none of them named `pom.xml`. The idea is that you copy to
+`pom.xml` as part of the instructions. So `pom_redis.xml` for
+`fulcro-rad-kvstore-redis` etc. Every adaptor will have its own `pom_<adaptor-name>.xml`.
+
+.Deployment instructions:
+- Update pom_redis.xml with the new version and copy it over pom.xml.
+- Create jar (this command reads from the pom.xml to create the jar file):
+
+ clojure -A:depstar:redis -m hf.depstar.jar fulcro-rad-kvstore-redis.jar
+
+- Deploy the jar file to maven using the `mvn` command. Either local only or to Clojars:
+
+ mvn install:install-file -Dfile=fulcro-rad-kvstore-redis.jar -DpomFile=pom.xml
+ mvn deploy:deploy-file -Dfile=fulcro-rad-kvstore-redis.jar -DpomFile=pom.xml -DrepositoryId=clojars -Durl=https://clojars.org/repo/
 
 == Copyright and License
 

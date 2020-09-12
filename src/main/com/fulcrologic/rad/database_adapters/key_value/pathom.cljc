@@ -3,7 +3,7 @@
   (:require
     [clojure.pprint :refer [pprint]]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
-    [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
+    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.form :as form]
     [com.wsscode.pathom.core :as p]
@@ -133,12 +133,13 @@
   "Find the keystore from the Pathom env, optionally given a schema and whether required from connections or databases"
   ([env schema kv-entry]
    [map? keyword? keyword? => ::key-value/key-store]
-   (if-let [{:keys [options] :as key-store} (cond
-                                              (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
-                                              (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
+   (if-let [{::kv-key-store/keys [options] :as key-store}
+            (cond
+              (= kv-entry ::key-value/connections) (some-> (get-in env [kv-entry schema]))
+              (= kv-entry ::key-value/databases) (some-> (get-in env [kv-entry schema]) deref))]
      (if-not (s/valid? ::key-value/key-store key-store)
        (throw (ex-info "Not a `::key-value/key-store`" {:key-store key-store
-                                                        :env-keys (keys env)}))
+                                                        :env-keys  (keys env)}))
        key-store)
      (log/error (str "No database atom for schema: " schema))))
   ([env]
@@ -183,7 +184,7 @@
                id (get params pk)
                ident [pk id]
                {:keys [::attr/schema]} (key->attribute pk)
-               {:keys [store]} (-> env ::key-value/connections (get schema))]
+               {::kv-key-store/keys [store]} (-> env ::key-value/connections (get schema))]
               (do
                 (<!! (k/update store pk dissoc id))
                 {})
@@ -249,7 +250,7 @@
     ::attr/keys      [schema attributes]
     :as              env}
    input
-   {:keys [ids->entities]}]
+   {::kv-key-store/keys [ids->entities]}]
   [map? any? ::key-value/key-store => any?]
   (let [{::attr/keys [qualified-key]} id-attribute
         one? (not (sequential? input))]

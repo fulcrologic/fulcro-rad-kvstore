@@ -1,16 +1,19 @@
 (ns com.fulcrologic.rad.database-adapters.key-value.write
   "All entry points for writing to `:store` inside `::key-value/key-store` that involve more than one entity.
   `::write-tree` and `::remove-table-rows` are the ones to be familiar with"
-  (:refer-clojure :exclude [flatten])
+  (:refer-clojure :exclude [flatten import])
   (:require [edn-query-language.core :as eql]
             [com.fulcrologic.guardrails.core :refer [>defn => ?]]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+            [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
             [konserve.core :as k]
             [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
-            [clojure.core.async :as async :refer [<!! chan go go-loop]]))
+            [clojure.core.async :as async :refer [<!! chan go go-loop]]
+            [clojure.spec.alpha :as s]
+            [taoensso.timbre :as log]))
 
 (>defn ident-of
   "Used when composing data to be stored. When a join is a reference (this function returns an ident reference) you
@@ -132,7 +135,7 @@
   "Writing will work whether given denormalized or normalized. Use this function to seed/import large amounts of
   data. As long as the input is coherent all the references should be respected. See
   `com.example.components.seeded-connection/seed!` for example usage."
-  [{:keys [store]} m]
+  [{::kv-key-store/keys [store]} m]
   [::key-value/key-store map? => any?]
   (let [entries (flatten m)]
     (<!! (go-loop [entries entries]
@@ -177,7 +180,7 @@
 
 (>defn remove-table-rows!
   "Given a table find out all its rows and remove them"
-  [{:keys [store]} env table]
+  [{::kv-key-store/keys [store]} env table]
   [::key-value/key-store map? ::strict-entity/table => any?]
   (<!! (k/dissoc store table)))
 
@@ -192,7 +195,7 @@
   Then generate a table using tempid->uuid.
   However tempid handling already being done outside this function, so just returning {}.
   For writing to our store we can just unwrap tempids, seen here in postwalk"
-  [{:keys [store options]} env delta]
+  [{::kv-key-store/keys [store options]} env delta]
   [::key-value/key-store map? map? => map?]
   (let [dont-store-nils? (:key-value/dont-store-nils? options)
         pairs-of-ident-map (->> delta
@@ -221,3 +224,18 @@
              (recur more)))))
   ;; :tempids handled by caller
   {})
+
+(>defn import
+  "Remove the row data for given tables, then write new entities. Usually the new entities are for corresponding tables,
+  however they don't have to be"
+  ([key-store tables entities]
+   [::key-value/key-store ::key-value/tables (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
+   (doseq [table tables]
+     (remove-table-rows! key-store {} table))
+   (when entities
+     (doseq [[table id value] entities]
+       (write-tree key-store value)))
+   (log/info "Have destructively reset" (count tables) "tables, replacing with data from" (count entities) "entities"))
+  ([key-store tables]
+   [::key-value/key-store ::key-value/tables => any?]
+   (import key-store tables [])))

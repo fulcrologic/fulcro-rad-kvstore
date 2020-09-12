@@ -9,8 +9,6 @@
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
  ;; The one that is :main will be picked up, the others ignored, but left here for reference.
- ;; In the future when we just use Konserve the 'k-' will go and there will only be one adaptor,
- ;; so not need for a protocol at all. But no need to rush...
                                     {:main      {:key-value/kind             :memory
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production}

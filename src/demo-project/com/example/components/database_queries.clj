@@ -1,6 +1,7 @@
 (ns com.example.components.database-queries
   (:require
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [taoensso.encore :as enc]
     [taoensso.timbre :as log]
     [konserve.core :as k]
@@ -19,7 +20,7 @@
 
 (defn get-all-accounts-1
   [env query-params]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (if (:show-inactive? query-params)
@@ -31,7 +32,7 @@
 
 (defn get-all-accounts-2
   [env query-params]
-  (when-let [{:keys [table->ident-rows table->rows]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [table->ident-rows table->rows]} (kv-pathom/env->key-store env)]
     (if (:show-inactive? query-params)
       (->> (table->ident-rows :account/id)
            (mapv (fn [[table id]] {table id})))
@@ -41,7 +42,7 @@
 
 (defn get-all-items
   [env {:category/keys [id] :as query-params}]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (if id
@@ -53,7 +54,7 @@
 
 (defn get-customer-invoices
   [env {:account/keys [id] :as query-params}]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (->> (vals (<! (k/get-in store [:invoice/id])))
@@ -62,7 +63,7 @@
 
 (defn get-all-invoices
   [env query-params]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (->> (keys (<! (k/get-in store [:invoice/id])))
@@ -70,7 +71,7 @@
 
 (defn get-invoice-customer-id
   [env invoice-id]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (-> (<! (k/get-in store [:invoice/id invoice-id]))
@@ -79,7 +80,7 @@
 
 (defn get-all-categories
   [env query-params]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (->> (keys (<! (k/get-in store [:category/id])))
@@ -87,7 +88,7 @@
 
 (defn get-line-item-category
   [env line-item-id]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (let [i-id (-> (<! (k/get-in store [:line-item/id line-item-id])) :line-item/item second)
@@ -97,7 +98,7 @@
 ;; Just created for testing
 (defn get-all-line-items
   [env query-params]
-  (when-let [{:keys [store]} (kv-pathom/env->key-store env)]
+  (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
     (<!!
       (go
         (->> (keys (<! (k/get-in store [:line-item/id])))
@@ -106,7 +107,7 @@
 (defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."
   [{::key-value/keys [databases] :as env} username]
-  (let [{:keys [store]} @(:production databases)]
+  (let [{::kv-key-store/keys [store]} @(:production databases)]
     (<!!
       (go
         (let [account (->> (vals (<! (k/get-in store [:account/id])))

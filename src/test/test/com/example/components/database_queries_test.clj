@@ -2,6 +2,7 @@
   (:require
     [clojure.test :refer :all]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
+    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [com.example.components.database-queries :as queries]
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -63,14 +64,14 @@
 
 (deftest customer-on-an-invoice
   (let [env (env)
-        {:keys [table->ident-rows]} (:main kv-connections)
+        {::kv-key-store/keys [table->ident-rows]} (:main kv-connections)
         iident (my-rand-nth (table->ident-rows :invoice/id))
         cid (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
   (let [env (env)
-        {:keys [table->ident-rows]} (:main kv-connections)
+        {::kv-key-store/keys [table->ident-rows]} (:main kv-connections)
         li-ident (my-rand-nth (table->ident-rows :line-item/id))
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))

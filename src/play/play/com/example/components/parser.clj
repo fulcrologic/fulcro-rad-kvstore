@@ -1,24 +1,25 @@
 (ns play.com.example.components.parser
   (:require
     [com.example.components.parser :as parser]
+    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [mount.core :refer [defstate]]
     [com.example.components.seeded-connection :refer [kv-connections all-tables!]]
     [general.dev :as dev]
     [com.example.model :refer [all-attributes]]
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [com.fulcrologic.rad.attributes :as attr]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
-    [konserve.core :as k]))
+    [konserve.core :as k]
+    [com.fulcrologic.rad.database-adapters.key-value :as key-value]))
 
 (defn env [] {})
 
 (defn key-store! [] (:main kv-connections))
 
 (defn read-from-connection []
-  (let [{:keys [ident->entity]} (key-store!)]
+  (let [{::kv-key-store/keys [ident->entity]} (key-store!)]
     (dev/pp (ident->entity [:account/id #uuid "ffffffff-ffff-ffff-ffff-000000000100"]))))
 
 (defn env-before-use-parser []
@@ -68,7 +69,7 @@
     instance-name))
 
 (defn entire-db []
-  (dev/pp (kv-key-store/export (key-store!) (env) (all-tables!))))
+  (dev/pp (key-value/export (key-store!) (env) (all-tables!))))
 
 (defn test-remove-all []
   (kv-write/remove-table-rows! (key-store!) (env) :account/id))
@@ -123,19 +124,19 @@
 ;       [?c :account/id ?account-uuid]] db invoice-id)
 
 (defn given-invoice-get-customer []
-  (let [{:keys [table->rows]} (key-store!)]
+  (let [{::kv-key-store/keys [table->rows]} (key-store!)]
     (-> (rand-nth (table->rows :invoice/id))
         :invoice/customer)))
 
 (defn given-line-item-get-category []
-  (let [{:keys [table->ident-rows ident->entity]} (key-store!)
+  (let [{::kv-key-store/keys [table->ident-rows ident->entity]} (key-store!)
         li-ident (rand-nth (table->ident-rows :line-item/id))
         i-id (-> (ident->entity li-ident) :line-item/item second)
         c-id (-> (ident->entity [:item/id i-id]) :item/category second)]
     c-id))
 
 (defn alter-test []
-  (let [{:keys [table->rows write-entity]} (key-store!)
+  (let [{::kv-key-store/keys [table->rows write-entity]} (key-store!)
         active-accounts-1 (->> (table->rows :account/id)
                                (filter :account/active?))
         altered-account (assoc (rand-nth active-accounts-1) :account/active? false)
