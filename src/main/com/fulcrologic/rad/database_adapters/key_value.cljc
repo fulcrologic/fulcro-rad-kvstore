@@ -174,23 +174,6 @@
   "Destructure like this and pass `store` to any k/ function"
   {::kv-key-store/keys [store table->rows table->ident-rows ident->entity write-entity ids->entities]})
 
-#_(case kind
-    :filestore (let [{:filestore/keys [location]} main-database]
-                 (make-key-store
-                   (<!! (new-fs-store location))
-                   (str "Konserve file store at " location)
-                   main-database))
-    :redis (let [{:redis/keys [uri]} main-database]
-             (make-key-store
-               (<!! (new-carmine-store uri))
-               (str "Konserve Redis at " uri)
-               main-database))
-    :memory (make-key-store
-              (<!! (new-mem-store))
-              (str "Konserve memory store")
-              main-database)
-    )
-
 (>defn start
   "Returns a map containing only one database - the `:main` one.
   Not like the datomic implementation of the same function, that will return many databases.

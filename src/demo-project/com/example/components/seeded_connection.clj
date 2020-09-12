@@ -7,6 +7,8 @@
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
+    ;; Just list all the adaptors here and the multi-method dynamic loading will work
+    [com.fulcrologic.rad.database-adapters.key-value.redis]
     [com.example.model.seed :as seed]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.type-support.date-time :as dt]))

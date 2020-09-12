@@ -43,10 +43,6 @@
            ;; Clojure Deps Projects refreshes, so INTENTIONAL RENAME to 'tset'. Make sure to have it ('tset') checked
            ;; in Clojure Deps Projects Aliases. Then 'mark as source' from in the IDE will 'hold' when you
            ;; 'Refresh Clojure Deps Projects'
-           ;;
-           ;; Note that currently I can run tests when .edn config set to :redis from REPL but not from test runner.
-           ;; Must be because the extra namespace not being loaded. `set-refresh-dirs` does this magic step for us.
-           ;; Maybe Kaocha will be better...
            :tset      {:extra-paths ["src/test" "src/demo-project" "src/redis"]
                        :extra-deps  {mount                          {:mvn/version "0.1.12"}
                                      cjmurphy/dev-lib               {:mvn/version "0.1.0"}
