@@ -18,14 +18,13 @@
     [com.fulcrologic.fulcro.components :as comp]))
 
 (defonce stats-accumulator
-  (tufte/add-accumulating-handler! {:ns-pattern "*"}))
+         (tufte/add-accumulating-handler! {:ns-pattern "*"}))
 
-(defonce app (rad-app/fulcro-rad-app
-               {:client-did-mount (fn [app]
-                                    (hist5/restore-route! app ui/LandingPage {}))
-                ;; Loading indicator in top RH corner going forever
-                ;:submit-transaction! stx/sync-tx!
-                }))
+(defonce app (stx/with-synchronous-transactions
+               (rad-app/fulcro-rad-app
+                 {:client-did-mount (fn [app]
+                                      (hist5/restore-route! app ui/LandingPage {}))
+                  })))
 
 (defn refresh []
   ;; hot code reload of installed controls
