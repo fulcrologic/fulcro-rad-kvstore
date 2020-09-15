@@ -1,16 +1,15 @@
 {:paths   ["src/main"]
  :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
-           com.fulcrologic/fulcro-rad {:mvn/version "1.0.0-RC1" :scope "provided"}
-           io.replikativ/konserve     {:mvn/version "0.5.1"}
-           }
+           com.fulcrologic/fulcro-rad {:mvn/version "1.0.3" :scope "provided"}
+           io.replikativ/konserve     {:mvn/version "0.5.1"} }
  :aliases {:dev       {:extra-paths ["src/dev" "src/demo-project" "src/play" "resources" "src/redis"]
                        :extra-deps  {org.clojure/tools.namespace            {:mvn/version "1.0.0"}
 
                                      com.fulcrologic/fulcro                 {:mvn/version "3.2.17"}
-                                     com.fulcrologic/fulcro-rad-semantic-ui {:mvn/version "0.0.12-alpha"}
+                                     com.fulcrologic/fulcro-rad-semantic-ui {:mvn/version "1.0.0"}
                                      com.fulcrologic/fulcro-i18n            {:mvn/version "0.0.4-alpha"}
                                      com.wsscode/pathom                     {:mvn/version "2.3.0-alpha10"}
-                                     edn-query-language/eql                 {:mvn/version "0.0.9"}
+                                     edn-query-language/eql                 {:mvn/version "1.0.0"}
                                      com.taoensso/encore                    {:mvn/version "2.120.0"}
                                      com.fulcrologic/guardrails             {:mvn/version "0.0.12"}
 
@@ -32,7 +31,7 @@
                                      org.slf4j/jcl-over-slf4j               {:mvn/version "1.7.30"} ; auto-sends java.common.logging to slf4j
                                      com.fzakaria/slf4j-timbre              {:mvn/version "0.3.19"} ; hooks slf4j to timbre
 
-                                     thheller/shadow-cljs                   {:mvn/version "2.10.21"}
+                                     thheller/shadow-cljs                   {:mvn/version "2.11.4"}
                                      org.clojure/clojurescript              {:mvn/version "1.10.758"}
                                      cjmurphy/dev-lib                       {:mvn/version "0.1.0"}
 
