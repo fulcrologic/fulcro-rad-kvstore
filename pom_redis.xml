@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.fulcrologic</groupId>
     <artifactId>fulcro-rad-kvstore-redis</artifactId>
-    <version>1.0.0-RC1-SNAPSHOT</version>
+    <version>1.0.0-RC1</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -22,7 +21,8 @@
         <url>https://github.com/fulcrologic/fulcro-rad-kvstore</url>
         <connection>scm:git:git://github.com/fulcrologic/fulcro-rad-kvstore.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/fulcrologic/fulcro-rad-kvstore.git</developerConnection>
-    </scm>
+      <tag>fulcro-rad-kvstore-redis-1.0.0-RC1</tag>
+  </scm>
     <distributionManagement>
         <repository>
             <id>clojars</id>
