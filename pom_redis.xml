@@ -1,15 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>com.fulcrologic</groupId>
-  <artifactId>fulcro-rad-kvstore-redis</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.fulcrologic</groupId>
+    <artifactId>fulcro-rad-kvstore-redis</artifactId>
+    <version>1.0.0-RC1-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
-  <name>fulcro-rad-kvstore-redis</name>
+    <name>fulcro-rad-kvstore-redis</name>
     <url>https://github.com/fulcrologic/fulcro-rad-kvstore</url>
     <licenses>
         <license>
@@ -53,17 +54,22 @@
             </plugin>
         </plugins>
     </build>
-  <dependencies>
-    <dependency>
-      <groupId>io.replikativ</groupId>
-      <artifactId>konserve-carmine</artifactId>
-      <version>0.1.3</version>
-    </dependency>
-  </dependencies>
-  <repositories>
-    <repository>
-      <id>clojars</id>
-      <url>https://repo.clojars.org/</url>
-    </repository>
-  </repositories>
+    <dependencies>
+        <dependency>
+            <groupId>com.fulcrologic</groupId>
+            <artifactId>fulcro-rad-kvstore</artifactId>
+            <version>1.0.0-RC1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.replikativ</groupId>
+            <artifactId>konserve-carmine</artifactId>
+            <version>0.1.3</version>
+        </dependency>
+    </dependencies>
+    <repositories>
+        <repository>
+            <id>clojars</id>
+            <url>https://repo.clojars.org/</url>
+        </repository>
+    </repositories>
 </project>
