@@ -41,7 +41,7 @@
                                      }}
            ;; Having "src/demo-project" demo-project in 'test' makes Cursive mark that directory as testing on Cursive
            ;; Clojure Deps Projects refreshes, so INTENTIONAL RENAME to 'tset'. Make sure to have it ('tset') checked
-           ;; in Clojure Deps Projects Aliases. Then 'mark as source' from in the IDE will 'hold' when you
+           ;; in Clojure Deps Projects Aliases. Then 'marked as source' from in the IDE will 'hold' when you
            ;; 'Refresh Clojure Deps Projects'
            :tset      {:extra-paths ["src/test" "src/demo-project" "src/redis"]
                        :extra-deps  {mount                          {:mvn/version "0.1.12"}
@@ -53,9 +53,6 @@
                        :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                :sha     "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
                        :main-opts  ["-m" "cognitect.test-runner"]}
-           ;; Creates jar files, see README, Deployment
-           :depstar   {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}}
-           ;; Don't actually need extra-deps b/c deps picked up from the pom.xml file. Again see README, Deployment
            :redis     {:extra-paths ["src/redis"]
                        :extra-deps  {io.replikativ/konserve-carmine {:mvn/version "0.1.3"}}}
            }}

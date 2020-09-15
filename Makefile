@@ -3,3 +3,9 @@ cljs:
 
 test:
 	clj -A:run-tests:tset -d src/test
+
+base-jar:
+	mvn -f pom_base.xml clean package
+
+redis-jar:
+	mvn -f pom_redis.xml clean package

@@ -187,32 +187,10 @@ for example.
 
 == Deployment
 
-A maven artifact is a jar file (with context) stored in a maven repository.
-There will be a base artifact (`fulcro-rad-kvstore.jar`) and one for each substantial adaptor:
-`:memory` and `:filestore` will be covered by the base artifact.
+There will be a base Maven artifact and one for each substantial adaptor. Thus `:memory` and `:filestore`
+will be covered by the base artifact.
 
-Please use an existing maven artifact. We will list them when they exist.
-These instructions are for maintainers.
-
-We will create a Redis jar file as an example. The actual deployment to maven under the `com.fulcrologic` groupId
-needs to be done by an authorized person.
-Multiple `pom.xml` files will be kept in this repo, but none of them named `pom.xml`. The idea is that you copy to
-`pom.xml` as part of the instructions. So `pom_redis.xml` for
-`fulcro-rad-kvstore-redis.jar` etc. Every adaptor will have its own `pom_<adaptor-name>.xml`. The base jar will be
-no different to any of the others, so we will have `pom_base.xml`.
-Is there a better way?? Once this gets the go ahead I'll put together `pom_base.xml` and `pom_redis.xml`. We are
-giving up possible generation from deps alias'.
-
-.Deployment instructions:
-- Update pom_redis.xml with the new version and copy it over pom.xml.
-- Create jar (this command reads from the pom.xml to create the jar file):
-
- clojure -A:depstar:redis -m hf.depstar.jar fulcro-rad-kvstore-redis.jar
-
-- Deploy the jar file to maven using the `mvn` command. Either local only or to Clojars:
-
- mvn install:install-file -Dfile=fulcro-rad-kvstore-redis.jar -DpomFile=pom.xml
- mvn deploy:deploy-file -Dfile=fulcro-rad-kvstore-redis.jar -DpomFile=pom.xml -DrepositoryId=clojars -Durl=https://clojars.org/repo/
+Please see the Makefile to produce your own local jars.
 
 == Copyright and License
 
