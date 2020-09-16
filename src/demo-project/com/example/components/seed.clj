@@ -1,4 +1,4 @@
-(ns com.example.model.seed
+(ns com.example.components.seed
   (:require
     [com.fulcrologic.rad.type-support.decimal :as math]
     [com.fulcrologic.rad.ids :refer [new-uuid]]

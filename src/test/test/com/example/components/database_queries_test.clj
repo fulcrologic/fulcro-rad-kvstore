@@ -7,7 +7,8 @@
     [com.example.components.seeded-connection :refer [kv-connections]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
-    [mount.core :as mount]))
+    [mount.core :as mount]
+    [au.com.seasoft.general.dev :as dev]))
 
 (deftest always-passes
   (let [amount 1000]
@@ -76,13 +77,14 @@
         cid (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 
-;; get-login-info-2
+;; get-login-info
 (deftest get-known-account
   (let [env (env)
-        {:account/keys [id name email]} (queries/get-login-info-2 env "sam@example.com")]
+        {:account/keys [id name email] :as account} (queries/get-login-info env "sam@example.com")]
     (is (= id (new-uuid 101)))
     (is (= name "Sam"))
     (is (= email "sam@example.com"))
+    ;(dev/pp account)
     ))
 
 ;;

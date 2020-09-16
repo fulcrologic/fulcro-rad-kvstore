@@ -1,9 +1,10 @@
 (ns play.com.example.components.seeded-connection
-  (:require [general.dev :as dev]
-            [com.example.model.seed :as seed]
-            [com.fulcrologic.rad.ids :refer [new-uuid]]
-            [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
-            [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]))
+  (:require
+    [au.com.seasoft.general.dev :as dev]
+    [com.example.components.seed :as seed]
+    [com.fulcrologic.rad.ids :refer [new-uuid]]
+    [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
+    [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]))
 
 (defn x-1 []
   (let [[table id value] (seed/new-account (new-uuid 100) "Tony" "tony@example.com" "letmein"

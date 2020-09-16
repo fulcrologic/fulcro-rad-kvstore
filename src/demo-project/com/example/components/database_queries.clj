@@ -40,6 +40,8 @@
            (filter :account/active?)
            (mapv #(select-keys % [:account/id]))))))
 
+(def get-all-accounts get-all-accounts-2)
+
 (defn get-all-items
   [env {:category/keys [id] :as query-params}]
   (when-let [{::kv-key-store/keys [store]} (kv-pathom/env->key-store env)]
@@ -104,7 +106,7 @@
         (->> (keys (<! (k/get-in store [:line-item/id])))
              (mapv (fn [id] {:line-item/id id})))))))
 
-(defn get-login-info-2
+(defn get-login-info
   "Get the account name, time zone, and password info via a username (email)."
   [{::key-value/keys [databases] :as env} username]
   (let [{::kv-key-store/keys [store]} @(:production databases)]
@@ -122,8 +124,9 @@
 ;;
 ;; Keeping to show that above we are not outputting the name of the time-zone
 ;; (rather the keyword)
+;; Not working code obviously!
 ;;
-(defn get-login-info-1
+(defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."
   [{::key-value/keys [databases] :as env} username]
   (enc/if-let [db @(:production databases)]

@@ -10,7 +10,7 @@
             [com.fulcrologic.rad.form :as form]
             [com.fulcrologic.rad.attributes :as attr]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
-            [com.example.model.seed :as seed]
+            [com.example.components.seed :as seed]
             [com.example.components.config :as config]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.core.async :as async :refer [<!! <! chan go go-loop]]

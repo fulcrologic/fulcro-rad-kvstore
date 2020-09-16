@@ -1,6 +1,6 @@
 (ns play.com.fulcrologic.rad.database-adapters.key-value.pathom
   (:require
-    [com.example.model.seed :as seed]
+    [com.example.components.seed :as seed]
     [com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
     [com.example.components.seeded-connection :refer [kv-connections]]
@@ -10,7 +10,7 @@
     [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [com.fulcrologic.rad.attributes :as attr]
     [com.example.model :refer [all-attributes]]
-    [general.dev :as dev]
+    [au.com.seasoft.general.dev :as dev]
     [com.example.components.config :as config]
     [clojure.core.async :as async :refer [<!! go]]
     [com.fulcrologic.fulcro.algorithms.tempid :as tempid]

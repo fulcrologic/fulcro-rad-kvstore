@@ -1,33 +1,40 @@
 (ns com.example.model.invoice
   (:require
-    [com.fulcrologic.rad.attributes :refer [defattr]]
+    [com.fulcrologic.rad.attributes :as attr :refer [defattr]]
     [com.fulcrologic.rad.attributes-options :as ao]
-    [com.fulcrologic.rad.form :as form]
+    ;[com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.report-options :as ro]
     [com.wsscode.pathom.connect :as pc]
-    [com.fulcrologic.rad.type-support.date-time :as datetime]
+    ;[com.fulcrologic.rad.type-support.date-time :as datetime]
     [com.fulcrologic.rad.type-support.decimal :as math]
     #?(:clj [com.example.components.database-queries :as queries])
-    [com.fulcrologic.rad.type-support.date-time :as dt]
+    [taoensso.timbre :as log]
+    ;[com.fulcrologic.rad.type-support.date-time :as dt]
     [cljc.java-time.local-date-time :as ldt]
     [taoensso.encore :as enc]
-    [cljc.java-time.local-date :as ld]))
+    [cljc.java-time.local-date :as ld]
+    ;[com.fulcrologic.rad.report :as report]
+    ))
 
 (defattr id :invoice/id :uuid
   {ao/identity? true
+   ;:com.fulcrologic.rad.database-adapters.datomic/native-id? true
    ao/schema    :production})
 
 (defattr date :invoice/date :instant
-  {::form/field-style           :date-at-noon
-   ::datetime/default-time-zone "America/Los_Angeles"
+  {
+   ;::form/field-style           :date-at-noon
+   ;::datetime/default-time-zone "America/Los_Angeles"
    ao/identities                #{:invoice/id}
    ao/schema                    :production})
 
 (defattr line-items :invoice/line-items :ref
-  {ao/target      :line-item/id
-   ao/cardinality :many
-   ao/identities  #{:invoice/id}
-   ao/schema      :production})
+  {ao/target                                                       :line-item/id
+   :com.fulcrologic.rad.database-adapters.sql/delete-referent?     true
+   :com.fulcrologic.rad.database-adapters.datomic/attribute-schema {:db/isComponent true}
+   ao/cardinality                                                  :many
+   ao/identities                                                   #{:invoice/id}
+   ao/schema                                                       :production})
 
 (defattr total :invoice/total :decimal
   {ao/identities      #{:invoice/id}
@@ -50,11 +57,11 @@
      {:account/id (queries/get-invoice-customer-id env id)}))
 
 (defattr all-invoices :invoice/all-invoices :ref
-         {ao/target     :invoice/id
-          ao/pc-output  [{:invoice/all-invoices [:invoice/id]}]
-          ao/pc-resolve (fn [{:keys [query-params] :as env} _]
-                          #?(:clj
-                             {:invoice/all-invoices (queries/get-all-invoices env query-params)}))})
+  {ao/target     :invoice/id
+   ao/pc-output  [{:invoice/all-invoices [:invoice/id]}]
+   ao/pc-resolve (fn [{:keys [query-params] :as env} _]
+                   #?(:clj
+                      {:invoice/all-invoices (queries/get-all-invoices env query-params)}))})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Statistics attributes.  Note that these are to-many, and are used by
@@ -112,51 +119,58 @@
 ;; the grouping calculations at the expense of having to make sure they are
 ;; calculated here.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-#?(:clj
-   (pc/defresolver invoice-statistics [{:keys [parser query-params] :as env} _]
-     {::pc/output [{:invoice-statistics [{:invoice-statistics/groups [:key :values]}]}]
-      ::pc/doc    "Pull and group the invoices and line items based on query-params. This then flows to other resolvers as input."}
-     ;; NOTE: you'd normally need to pass in tz as a param, or use it from session to localize the groupings.
-     (let [{:keys    [start-date end-date]
-            grouping :group-by} query-params
-           ;; TODO: Actual start/end filter
-           all-invoices     (get
-                              (parser env [{:invoice/all-invoices [:invoice/id
-                                                                   :invoice/date
-                                                                   :invoice/total
-                                                                   {:invoice/line-items [:line-item/quantity
-                                                                                         :line-item/subtotal]}]}])
-                              :invoice/all-invoices)
-           ;; TODO: support date range on all-invoices
-           invoices         (filterv (fn [{:invoice/keys [date]}]
-                                       (and
-                                         (or (nil? start-date) (<= (compare start-date date) 0))
-                                         (or (nil? end-date) (<= (compare date end-date) 0))))
-                              all-invoices)
-           grouped-invoices (enc/map-keys (fn [ld] (if (keyword? ld)
-                                                     ld
-                                                     (dt/local-datetime->inst (ld/at-time ld 12 0))))
-                              (group-by
-                                (fn [{:invoice/keys [date]}]
-                                  (case grouping
-                                    :year (let [d (dt/inst->local-datetime date)]
-                                            (-> (ldt/to-local-date d)
-                                              (ld/with-day-of-month 1)
-                                              (ld/with-month 1)))
-                                    :month (let [d (dt/inst->local-datetime date)]
-                                             (ld/with-day-of-month (ldt/to-local-date d) 1))
-                                    :day (let [d (dt/inst->local-datetime date)]
-                                           (ldt/to-local-date d))
-                                    ;;default is summary
-                                    :summary))
-                                invoices))
-           result           (reduce
-                              (fn [result k]
-                                (conj result {:key k :values (get grouped-invoices k)}))
-                              []
-                              (sort (keys grouped-invoices)))]
-       {:invoice-statistics {:invoice-statistics/groups result}})))
+;#?(:clj
+;   (pc/defresolver invoice-statistics [{:keys [parser query-params] :as env} _]
+;     {::pc/output [{:invoice-statistics [{:invoice-statistics/groups [:key :values]}]}]
+;      ::pc/doc    "Pull and group the invoices and line items based on query-params. This then flows to other resolvers as input."}
+;     ;; NOTE: you'd normally need to pass in tz as a param, or use it from session to localize the groupings.
+;     (let [{:keys    [start-date end-date]
+;            grouping :group-by} query-params
+;           ;; TODO: Actual start/end filter
+;           all-invoices     (get
+;                              (parser env [{:invoice/all-invoices [:invoice/id
+;                                                                   :invoice/date
+;                                                                   :invoice/total
+;                                                                   {:invoice/line-items [:line-item/quantity
+;                                                                                         :line-item/subtotal]}]}])
+;                              :invoice/all-invoices)
+;           ;; TODO: support date range on all-invoices
+;           invoices         (filterv (fn [{:invoice/keys [date]}]
+;                                       (and
+;                                         (or (nil? start-date) (<= (compare start-date date) 0))
+;                                         (or (nil? end-date) (<= (compare date end-date) 0))))
+;                              all-invoices)
+;           grouped-invoices (enc/map-keys (fn [ld] (if (keyword? ld)
+;                                                     ld
+;                                                     (dt/local-datetime->inst (ld/at-time ld 12 0))))
+;                              (group-by
+;                                (fn [{:invoice/keys [date]}]
+;                                  (case grouping
+;                                    :year (let [d (dt/inst->local-datetime date)]
+;                                            (-> (ldt/to-local-date d)
+;                                              (ld/with-day-of-month 1)
+;                                              (ld/with-month 1)))
+;                                    :month (let [d (dt/inst->local-datetime date)]
+;                                             (ld/with-day-of-month (ldt/to-local-date d) 1))
+;                                    :day (let [d (dt/inst->local-datetime date)]
+;                                           (ldt/to-local-date d))
+;                                    ;;default is summary
+;                                    :summary))
+;                                invoices))
+;           result           (reduce
+;                              (fn [result k]
+;                                (conj result {:key k :values (get grouped-invoices k)}))
+;                              []
+;                              (sort (keys grouped-invoices)))]
+;       {:invoice-statistics {:invoice-statistics/groups result}})))
 
 (def attributes [id date line-items customer all-invoices total date-groups gross-sales items-sold])
 #?(:clj
-   (def resolvers [customer-id invoice-statistics]))
+   (def resolvers [customer-id #_invoice-statistics]))
+
+#_(comment
+  (report/rotate-result
+    {:invoice-statistics/date-groups ["1/1/2020" "2/1/2020" "3/1/2020" "4/1/2020"]
+     :invoice-statistics/gross-sales [323M 313M 124M 884M]
+     :invoice-statistics/items-sold  [10 11 5 42]}
+    [date-groups gross-sales items-sold]))

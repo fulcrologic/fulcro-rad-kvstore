@@ -6,7 +6,7 @@
     [mount.core :as mount]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [general.dev :as dev]))
+    [au.com.seasoft.general.dev :as dev]))
 
 (defn env []
   (mount/start)

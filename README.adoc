@@ -75,8 +75,8 @@ reference can be either an ident or a vector of idents.
 
 To create a `::key-value/key-store` call `key-value/start` passing in the RAD configuration map.
 `::kv-key-store/store` inside the returned map is where the real Konserve
-adaptor is located. Unless the `:kind` of adaptor you are creating is `:memory` or `:filestore` make sure you have
-required the namespace associated with the adaptor you are requesting, so that the defmethod of the
+adaptor is located. Unless the `:kind` of adaptor you are creating is `:memory`, `:filestore` or `:indexeddb`
+make sure you have required the namespace associated with the adaptor you are requesting, so that the defmethod of the
 `make-konserve-adaptor` multimethod can be found. As mentioned in a comment in the example `:require`, there is no
 need for an alias.
 
@@ -179,16 +179,26 @@ https://www.digitalocean.com/community/tutorials/how-to-install-and-secure-redis
 
 == Updating Demo project
 
+This section more for maintainers, just outlining steps to be taken when copying in the latest RAD Demo.
+
 Apart from `com.example.components` and `config`, overwrite all with new files. So `com.example`: `client.cljs`,
 `model.cljc` and `ui.cljc`, then `com.example.model` and `com.example.ui`. The mount components should not change but
-you might want to check the `.edn` config files. `time-zone` is Datomic-specific so remove it by commenting out
-`timezone/attributes` from `com.example.model` and on whatever UIs TZ appears - in `fo/attributes` in `AccountForm`
-for example.
+you might want to check the `.edn` config files.
+
+The Demo project should now work; the following changes are optional.
+
+Additionally I've found I need to add this to every Form, regardless of the Database plugin:
+
+ ::form/confirm (fn [message]
+                  #?(:cljs (js/confirm message)))
+
+`time-zone` is Datomic-specific so remove it by commenting out timezone/attributes from com.example.model and on
+whatever UIs TZ appears - in fo/attributes in AccountForm for example (`timezone/zone-id`).
 
 == Deployment
 
-There will be a base Maven artifact and one for each substantial adaptor. Thus `:memory` and `:filestore`
-will be covered by the base artifact.
+There will be a base Maven artifact and one for each substantial adaptor. Thus `:memory`, `:filestore` and
+`:indexeddb` will be covered by the base artifact.
 
 Please see the Makefile to produce your own local jars.
 

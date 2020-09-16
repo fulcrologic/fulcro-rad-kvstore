@@ -1,11 +1,13 @@
 (ns com.example.model.address
   (:require
-    [com.fulcrologic.rad.attributes :refer [defattr]]
-    [com.fulcrologic.rad.attributes-options :as ao]))
+    [com.fulcrologic.rad.attributes :as attr :refer [defattr]]
+    [com.fulcrologic.rad.attributes-options :as ao]
+    [com.fulcrologic.rad.authorization :as auth]))
 
 (defattr id :address/id :uuid
-  {ao/identity? true
-   ao/schema    :production})
+  {ao/identity?                                     true
+   :com.fulcrologic.rad.database-adapters.sql/table "address"
+   ao/schema                                        :production})
 
 (defattr street :address/street :string
   {ao/schema     :production

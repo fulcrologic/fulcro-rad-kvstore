@@ -10,6 +10,8 @@
     [com.fulcrologic.rad.type-support.decimal :as math]
     [com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.form-options :as fo]
+    [taoensso.timbre :as log]
+    [com.fulcrologic.fulcro.application :as app]
     [com.fulcrologic.fulcro.ui-state-machines :as uism]
     [com.fulcrologic.fulcro.algorithms.normalized-state :as fns]))
 
@@ -18,8 +20,8 @@
 
 (form/defsc-form LineItemForm [this props]
   {fo/id            line-item/id
-   ::form/confirm    (fn [message]
-                       #?(:cljs (js/confirm message)))
+   ::form/confirm (fn [message]
+                    #?(:cljs (js/confirm message)))
    fo/attributes    [line-item/category line-item/item line-item/quantity line-item/quoted-price line-item/subtotal]
    fo/validator     model/all-attribute-validator
    fo/route-prefix  "line-item"

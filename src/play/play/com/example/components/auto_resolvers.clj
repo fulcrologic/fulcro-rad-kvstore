@@ -3,7 +3,7 @@
     [com.example.model :refer [all-attributes]]
     [mount.core :refer [defstate]]
     [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
-    [general.dev :as dev]))
+    [au.com.seasoft.general.dev :as dev]))
 
 (comment
   [{:com.fulcrologic.rad.attributes/type          :string,

@@ -3,7 +3,7 @@
     [taoensso.timbre :as log]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [edn-query-language.core :as eql]
-    [general.dev :as dev]
+    [au.com.seasoft.general.dev :as dev]
     [konserve.filestore :refer [new-fs-store]]
     [konserve.core :as k]
     [clojure.core.async :as async :refer [<!! chan go go-loop]]))

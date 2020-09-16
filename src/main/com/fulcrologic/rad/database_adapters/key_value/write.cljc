@@ -11,7 +11,8 @@
             [clojure.walk :as walk]
             [konserve.core :as k]
             [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
-            [clojure.core.async :as async :refer [<!! chan go go-loop]]
+            #?(:clj [clojure.core.async :as async :refer [<!! go-loop]])
+            #?(:cljs [cljs.core.async :as async :refer [<! go-loop]])
             [clojure.spec.alpha :as s]
             [taoensso.timbre :as log]))
 
@@ -138,10 +139,14 @@
   [{::kv-key-store/keys [store]} m]
   [::key-value/key-store map? => any?]
   (let [entries (flatten m)]
-    (<!! (go-loop [entries entries]
-           (when-let [[ident m] (first entries)]
-             (k/assoc-in store ident m)
-             (recur (rest entries)))))))
+    #?(:clj  (<!! (go-loop [entries entries]
+                    (when-let [[ident m] (first entries)]
+                      (k/assoc-in store ident m)
+                      (recur (rest entries)))))
+       :cljs (<! (go-loop [entries entries]
+                          (when-let [[ident m] (first entries)]
+                            (k/assoc-in store ident m)
+                            (recur (rest entries))))))))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))
 
@@ -182,7 +187,8 @@
   "Given a table find out all its rows and remove them"
   [{::kv-key-store/keys [store]} env table]
   [::key-value/key-store map? ::strict-entity/table => any?]
-  (<!! (k/dissoc store table)))
+  #?(:clj  (<!! (k/dissoc store table))
+     :cljs (<! (k/dissoc store table))))
 
 (>defn write-delta
   "What a delta looks like (only one map-entry here):
@@ -216,12 +222,18 @@
         pairs (cond
                 ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
                 (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
-    (<!! (go-loop [[pair & more] pairs]
-           (when-let [[ident m] (if (map? pair)
-                                  (first pair)
-                                  pair)]
-             (k/update-in store ident merge m)
-             (recur more)))))
+    #?(:clj  (<!! (go-loop [[pair & more] pairs]
+                    (when-let [[ident m] (if (map? pair)
+                                           (first pair)
+                                           pair)]
+                      (k/update-in store ident merge m)
+                      (recur more))))
+       :cljs (<! (go-loop [[pair & more] pairs]
+                          (when-let [[ident m] (if (map? pair)
+                                                 (first pair)
+                                                 pair)]
+                            (k/update-in store ident merge m)
+                            (recur more))))))
   ;; :tempids handled by caller
   {})
 

@@ -15,7 +15,8 @@
     [edn-query-language.core :as eql]
     [clojure.spec.alpha :as s]
     [konserve.core :as k]
-    [clojure.core.async :as async :refer [<!! <! >! chan go go-loop close!]]
+    #?(:clj [clojure.core.async :as async :refer [<!!]])
+    #?(:cljs [cljs.core.async :as async :refer [<!]])
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [taoensso.timbre :as log]))
 
@@ -186,7 +187,8 @@
                {:keys [::attr/schema]} (key->attribute pk)
                {::kv-key-store/keys [store]} (-> env ::key-value/connections (get schema))]
               (do
-                (<!! (k/update store pk dissoc id))
+                #?(:clj (<!! (k/update store pk dissoc id))
+                   :cljs (<! (k/update store pk dissoc id)))
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
 

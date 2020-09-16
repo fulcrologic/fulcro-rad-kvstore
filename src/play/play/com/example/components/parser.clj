@@ -4,7 +4,7 @@
     [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [mount.core :refer [defstate]]
     [com.example.components.seeded-connection :refer [kv-connections all-tables!]]
-    [general.dev :as dev]
+    [au.com.seasoft.general.dev :as dev]
     [com.example.model :refer [all-attributes]]
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
     [com.fulcrologic.rad.ids :refer [new-uuid]]

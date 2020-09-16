@@ -57,7 +57,9 @@
     [konserve.core :as k]
     [konserve.filestore :refer [new-fs-store]]
     [konserve.memory :refer [new-mem-store]]
-    [clojure.core.async :as async :refer [<!! <! >! close! chan go go-loop]]
+    #?(:cljs [konserve.indexeddb :refer [new-indexeddb-store]])
+    #?(:clj [clojure.core.async :as async :refer [<!! <! >! close! chan go]])
+    #?(:cljs [cljs.core.async :as async :refer [<! >! close! chan go]])
     [taoensso.timbre :as log]))
 
 (s/def ::key-store (s/keys :req [::kv-key-store/store ::kv-key-store/instance-name]))
@@ -103,6 +105,15 @@
    (new-mem-store)])
 
 ;;
+;; Not tested and very unlikely to work!
+;;
+#?(:cljs (defmethod make-konserve-adaptor
+           :indexeddb
+           [_ {:indexeddb/keys [name] :as options}]
+           [(str "Konserve IndexedDB store called " name)
+            (new-indexeddb-store name)]))
+
+;;
 ;; There are supposed to be bang versions
 ;; https://github.com/replikativ/konserve/issues/24
 ;; So not need to <!! here every time
@@ -117,26 +128,30 @@
   "Get all the data for a particular table as a vector of maps"
   [store table]
   [::kv-key-store/store ::strict-entity/table => ::rows]
-  (vec (vals (<!! (k/get-in store [table])))))
+  (vec (vals #?(:cljs (<! (k/get-in store [table]))
+                :clj (<!! (k/get-in store [table]))))))
 
 (>defn table->ident-rows
   "Instead of getting all the data, get all the rows but only in ident form"
   [store table]
   [::kv-key-store/store ::strict-entity/table => ::idents]
-  (->> (keys (<!! (k/get-in store [table])))
+  (->> (keys #?(:cljs (<! (k/get-in store [table]))
+                :clj (<!! (k/get-in store [table]))))
        (mapv (fn [id] [table id]))))
 
 (>defn ident->entity
   "Given an ident, fetch out a whole entity"
   [store ident]
   [::kv-key-store/store ::strict-entity/ident => ::entity]
-  (<!! (k/get-in store ident)))
+  #?(:cljs (<! (k/get-in store ident))
+     :clj (<!! (k/get-in store ident))))
 
 (>defn write-entity
   "Store an entity at its ident location"
   [store entity]
   [::kv-key-store/store ::entity => any?]
-  (<!! (k/assoc-in store (strict-entity/entity->ident entity) entity)))
+  #?(:cljs (<! (k/assoc-in store (strict-entity/entity->ident entity) entity))
+     :clj (<!! (k/assoc-in store (strict-entity/entity->ident entity) entity))))
 
 (>defn ids->entities
   "Getting a load of entities from idents at once (async) and putting them into an output chan"
@@ -152,7 +167,8 @@
               (log/warn "Could not find an entity from ident" [table id]))
             (recur (next ids)))))
       (close! out))
-    (<!! (async/into [] out))))
+    #?(:cljs (<! (async/into [] out))
+       :clj (<!! (async/into [] out)))))
 
 (>defn make-key-store
   "Given a Konserve key value store (the real adaptor) create a map around it so we have access to its instance-name and
@@ -192,7 +208,8 @@
     (when (nil? kind)
       (throw (ex-info ":kind not found in :main database\n" {:database main-database})))
     (let [[desc adaptor] (make-konserve-adaptor kind main-database)]
-      (make-key-store (<!! adaptor) desc main-database))))
+      (make-key-store #?(:cljs (<! adaptor)
+                         :clj (<!! adaptor)) desc main-database))))
 
 (>defn export
   "Sometimes useful to see the whole database at once"
