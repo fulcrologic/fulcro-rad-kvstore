@@ -80,6 +80,11 @@ make sure you have required the namespace associated with the adaptor you are re
 `make-konserve-adaptor` multimethod can be found. As mentioned in a comment in the example `:require`, there is no
 need for an alias.
 
+ {::kv-key-store/keys [store]} (key-value/start config/config)
+
+Note that `:indexeddb` will not yet be working at all. Getting this working in CLJS is planned for the next
+development iteration.
+
 == Functions
 
 `::key-value/key-store` can be destructured:
@@ -145,6 +150,8 @@ An area of integration not included on this table is where your hand written res
 database. Here queries will receive `env`, which they can then pass to the function
 `kv-pathom/env->key-store` to get the `::key-value/key-store`. With this key store
 in hand either use one of the pre-written functions the map contains, or use Konserve directly.
+
+ {::kv-key-store/keys [store]} (kv-pathom/env->key-store env)
 
 == Comparison with Datomic Database plugin
 

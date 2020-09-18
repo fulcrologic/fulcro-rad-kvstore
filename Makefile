@@ -5,7 +5,7 @@ test:
 	clj -A:run-tests:tset -d src/test
 
 base-jar:
-	mvn -f pom_base.xml clean package
+	mvn -f pom.xml clean package
 
 redis-jar:
 	mvn -f pom_redis.xml clean package

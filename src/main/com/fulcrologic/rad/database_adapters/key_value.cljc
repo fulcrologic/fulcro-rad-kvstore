@@ -105,11 +105,13 @@
    (new-mem-store)])
 
 ;;
-;; Not tested and very unlikely to work!
+;; Not tested and won't work! Needs to always deal in channels, returns from go blocks, as <!! doesn't exist.
+;; It is actually wrong at the moment.
 ;;
 #?(:cljs (defmethod make-konserve-adaptor
            :indexeddb
            [_ {:indexeddb/keys [name] :as options}]
+           (throw (ex-info ":indexeddb not yet developed, can't be used" {}))
            [(str "Konserve IndexedDB store called " name)
             (new-indexeddb-store name)]))
 
