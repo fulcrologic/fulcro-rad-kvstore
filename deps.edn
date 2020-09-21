@@ -1,13 +1,15 @@
 {:paths   ["src/main"]
  :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
-           com.fulcrologic/fulcro-rad {:mvn/version "1.0.4" :scope "provided"}
+           ;com.fulcrologic/fulcro-rad {:mvn/version "1.0.4" :scope "provided"}
+           com.fulcrologic/fulcro-rad {:local/root "/home/chris/IdeaProjects/fulcro-rad"}
            io.replikativ/konserve     {:mvn/version "0.5.1"}
+           io.replikativ/hasch        {:mvn/version "0.3.7"}
            }
  :aliases {:dev        {:extra-paths ["src/dev" "src/demo-project" "src/play" "resources"
                                       "src/redis" "src/couchdb" "src/leveldb" "src/postgresql" "src/riak"]
                         :extra-deps  {org.clojure/tools.namespace            {:mvn/version "1.0.0"}
 
-                                      com.fulcrologic/fulcro                 {:mvn/version "3.3.1"}
+                                      com.fulcrologic/fulcro                 {:mvn/version "3.3.3"}
                                       com.fulcrologic/fulcro-rad-semantic-ui {:mvn/version "1.0.0"}
                                       com.fulcrologic/fulcro-i18n            {:mvn/version "0.0.4-alpha"}
                                       com.wsscode/pathom                     {:mvn/version "2.3.0-alpha10"}
@@ -59,7 +61,7 @@
                         :extra-deps {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                 :sha     "6ec7f8eef509cd14d831e8cc16e856b31327a862"}}
                         :main-opts  ["-m" "cognitect.test-runner"]}
-           ;; For deployment, probably none required as using Maven directly
+           ;; For deployment, however in actuality none required as Maven (pom files) being used directly
            :depstar    {:extra-deps {seancorfield/depstar {:mvn/version "1.1.104"}}}
            :redis      {:extra-paths ["src/redis"]
                         :extra-deps  {io.replikativ/konserve-carmine {:mvn/version "0.1.3"}}}

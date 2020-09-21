@@ -1,5 +1,6 @@
 /.idea/
 /fulcro-rad-kvstore*.jar
+/hs_err*.log
 target
 /fulcro-rad-kvstore.iml
 node_modules

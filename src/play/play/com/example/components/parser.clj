@@ -3,7 +3,8 @@
     [com.example.components.parser :as parser]
     [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
     [mount.core :refer [defstate]]
-    [com.example.components.seeded-connection :refer [kv-connections all-tables!]]
+    [com.example.components.seeded-connection :refer [kv-connections]]
+    [com.example.components.seed :refer [all-tables!]]
     [au.com.seasoft.general.dev :as dev]
     [com.example.model :refer [all-attributes]]
     [com.example.components.auto-resolvers :refer [automatic-resolvers]]
@@ -72,12 +73,12 @@
   (dev/pp (key-value/export (key-store!) (env) (all-tables!))))
 
 (defn test-remove-all []
-  (kv-write/remove-table-rows! (key-store!) (env) :account/id))
+  (kv-write/remove-table-rows (key-store!) (env) :account/id))
 
 (defn wipe-database []
   (let [key-store (key-store!)]
     (doseq [table (all-tables!)]
-      (kv-write/remove-table-rows! key-store (env) table))))
+      (kv-write/remove-table-rows key-store (env) table))))
 
 (defn all-addresses []
   (let [{:keys [table->rows]} (key-store!)]

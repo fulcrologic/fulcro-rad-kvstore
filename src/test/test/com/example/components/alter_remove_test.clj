@@ -2,7 +2,8 @@
   (:require [clojure.test :refer :all]
             [com.fulcrologic.rad.database-adapters.key-value :as key-value]
             [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
-            [com.example.components.seeded-connection :refer [kv-connections all-tables! all-entities!]]
+            [com.example.components.seeded-connection :refer [kv-connections]]
+            [com.example.components.seed :refer [all-tables! all-entities!]]
             [mount.core :as mount]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
             [com.fulcrologic.rad.ids :refer [new-uuid]]
@@ -50,7 +51,7 @@
   (let [[env {::kv-key-store/keys [store table->rows] :as key-store}] (env-key-store)
         accounts-1 (table->rows :account/id)
         candidate-account (my-rand-nth accounts-1)]
-    (kv-write/remove-table-rows! key-store env :account/id)
+    (kv-write/remove-table-rows key-store env :account/id)
     (let [accounts-2 (table->rows :account/id)
           num-1 (count accounts-1)
           num-2 (count accounts-2)]

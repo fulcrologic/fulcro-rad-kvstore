@@ -172,7 +172,7 @@
             ;(when database-atom
             ;  (reset! database-atom (d/db connection)))
             (swap! result update :tempids merge tempid->real-id))
-          (catch Exception e
+          (catch #?(:clj Exception :cljs js/Object) e
             (log/error e "Transaction failed!")
             {}))
         (log/error "Unable to save form. Connection missing in env." (keys env))))
@@ -187,7 +187,7 @@
                {:keys [::attr/schema]} (key->attribute pk)
                {::kv-key-store/keys [store]} (-> env ::key-value/connections (get schema))]
               (do
-                #?(:clj (<!! (k/update store pk dissoc id))
+                #?(:clj  (<!! (k/update store pk dissoc id))
                    :cljs (<! (k/update store pk dissoc id)))
                 {})
               (log/warn "Key Value adapter failed to delete " params)))

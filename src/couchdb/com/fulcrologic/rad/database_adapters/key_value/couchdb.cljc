@@ -3,7 +3,7 @@
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [konserve-clutch.core :refer [new-clutch-store]]))
 
-(defmethod key-value/make-konserve-adaptor :couchdb
+(defmethod key-value/make-adaptor :couchdb
   [_ {:couchdb/keys [db]}]
   [(str "Konserve CouchDB at " db)
    (new-clutch-store db)])

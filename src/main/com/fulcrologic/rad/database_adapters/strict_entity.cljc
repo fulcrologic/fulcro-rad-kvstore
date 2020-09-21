@@ -17,6 +17,11 @@
 
 (s/def ::ident (s/tuple ::table ::id))
 
+;;
+;; To be checking that it is a strict entity every time would be too much
+;;
+(s/def ::entity map?)
+
 (defn id-attribute-f
   "Obtains the /id attribute from an entity"
   [m]

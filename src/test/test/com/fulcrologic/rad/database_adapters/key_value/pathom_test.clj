@@ -1,6 +1,6 @@
 (ns test.com.fulcrologic.rad.database-adapters.key-value.pathom-test
   (:require [clojure.test :refer :all]
-            [com.example.components.seeded-connection :refer [all-tables! all-entities!]]
+            [com.example.components.seed :refer [all-tables! all-entities!]]
             [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write :refer [ident-of value-of]]
             [com.example.model :refer [all-attributes]]
             [com.fulcrologic.rad.ids :refer [new-uuid]]

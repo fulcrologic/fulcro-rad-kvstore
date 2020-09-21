@@ -9,12 +9,12 @@
             [com.fulcrologic.fulcro.algorithms.normalized-state :refer [swap!->]]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
-            [konserve.core :as k]
             [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
-            #?(:clj [clojure.core.async :as async :refer [<!! go-loop]])
-            #?(:cljs [cljs.core.async :as async :refer [<! go-loop]])
+            #?(:clj [clojure.core.async :as async :refer [<! go go-loop]])
+            #?(:cljs [cljs.core.async :as async :refer [<! go go-loop]])
             [clojure.spec.alpha :as s]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [com.fulcrologic.rad.database-adapters.key-value.konserve :as kv-konserve]))
 
 (>defn ident-of
   "Used when composing data to be stored. When a join is a reference (this function returns an ident reference) you
@@ -139,14 +139,8 @@
   [{::kv-key-store/keys [store]} m]
   [::key-value/key-store map? => any?]
   (let [entries (flatten m)]
-    #?(:clj  (<!! (go-loop [entries entries]
-                    (when-let [[ident m] (first entries)]
-                      (k/assoc-in store ident m)
-                      (recur (rest entries)))))
-       :cljs (<! (go-loop [entries entries]
-                          (when-let [[ident m] (first entries)]
-                            (k/assoc-in store ident m)
-                            (recur (rest entries))))))))
+    (go (<! (kv-konserve/write-entities store entries)))
+    nil))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))
 
@@ -183,12 +177,12 @@
                     [attrib attrib-v])))
           m)))
 
-(>defn remove-table-rows!
+(>defn remove-table-rows
   "Given a table find out all its rows and remove them"
   [{::kv-key-store/keys [store]} env table]
   [::key-value/key-store map? ::strict-entity/table => any?]
-  #?(:clj  (<!! (k/dissoc store table))
-     :cljs (<! (k/dissoc store table))))
+  (go (<! (kv-konserve/remove-table-rows store table)))
+  nil)
 
 (>defn write-delta
   "What a delta looks like (only one map-entry here):
@@ -222,18 +216,7 @@
         pairs (cond
                 ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
                 (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
-    #?(:clj  (<!! (go-loop [[pair & more] pairs]
-                    (when-let [[ident m] (if (map? pair)
-                                           (first pair)
-                                           pair)]
-                      (k/update-in store ident merge m)
-                      (recur more))))
-       :cljs (<! (go-loop [[pair & more] pairs]
-                          (when-let [[ident m] (if (map? pair)
-                                                 (first pair)
-                                                 pair)]
-                            (k/update-in store ident merge m)
-                            (recur more))))))
+    (go (<! (kv-konserve/merge-entities store pairs))))
   ;; :tempids handled by caller
   {})
 
@@ -241,13 +224,13 @@
   "Remove the row data for given tables, then write new entities. Usually the new entities are for corresponding tables,
   however they don't have to be"
   ([key-store tables entities]
-   [::key-value/key-store ::key-value/tables (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
+   [::key-value/key-store (s/coll-of ::strict-entity/table) (s/coll-of ::key-value/table-id-entity-3-tuple :kind vector?) => any?]
    (doseq [table tables]
-     (remove-table-rows! key-store {} table))
+     (remove-table-rows key-store {} table))
    (when entities
      (doseq [[table id value] entities]
        (write-tree key-store value)))
    (log/info "Have destructively reset" (count tables) "tables, replacing with data from" (count entities) "entities"))
   ([key-store tables]
-   [::key-value/key-store ::key-value/tables => any?]
+   [::key-value/key-store (s/coll-of ::strict-entity/table) => any?]
    (import key-store tables [])))

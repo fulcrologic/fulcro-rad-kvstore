@@ -26,7 +26,7 @@
                                                                               (first)
                                                                               (str/lower-case))
                                                                             "")]
-                                                               (str/starts-with? (get form field) prefix))
+                                                               (and (get form field) (str/starts-with? (get form field) prefix)))
                                               (= :valid (model/all-attribute-validator form field))))))
 
 ;; NOTE: Limitation: Each "storage location" requires a form. The ident of the component matches the identity

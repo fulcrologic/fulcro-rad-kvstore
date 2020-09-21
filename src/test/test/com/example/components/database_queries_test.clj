@@ -14,7 +14,9 @@
   (let [amount 1000]
     (is (= 1000 amount))))
 
-(defn env []
+(defn env
+  "Queries get the Pathom env. So here we mock it, as not using Pathom"
+  []
   (mount/start)
   (let [conn (:main kv-connections)]
     {::key-value/databases {:production (atom conn)}}))
