@@ -10,7 +10,7 @@
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.walk :as walk]
             [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
-            #?(:clj [clojure.core.async :as async :refer [<! go go-loop]])
+            #?(:clj [clojure.core.async :as async :refer [<!! <! go go-loop]])
             #?(:cljs [cljs.core.async :as async :refer [<! go go-loop]])
             [clojure.spec.alpha :as s]
             [taoensso.timbre :as log]
@@ -139,8 +139,8 @@
   [{::kv-key-store/keys [store]} m]
   [::key-value/key-store map? => any?]
   (let [entries (flatten m)]
-    (go (<! (kv-konserve/write-entities store entries)))
-    nil))
+    #?(:cljs (go (<! (kv-konserve/write-entities store entries)))
+       :clj (<!! (kv-konserve/write-entities store entries)))))
 
 (def before-after? (every-pred map? #(= 2 (count %)) #(contains? % :before) #(contains? % :after)))
 
@@ -181,44 +181,46 @@
   "Given a table find out all its rows and remove them"
   [{::kv-key-store/keys [store]} env table]
   [::key-value/key-store map? ::strict-entity/table => any?]
-  (go (<! (kv-konserve/remove-table-rows store table)))
-  nil)
+  #?(:cljs (go (<! (kv-konserve/remove-table-rows store table)))
+     :clj  (<!! (kv-konserve/remove-table-rows store table))))
 
 (>defn write-delta
-  "What a delta looks like (only one map-entry here):
+   "What a delta looks like (only one map-entry here):
 
-    {[:account/id #uuid \"ffffffff-ffff-ffff-ffff-000000000100\"]
-     {:account/active? {:before true, :after false}}}
+     {[:account/id #uuid \"ffffffff-ffff-ffff-ffff-000000000100\"]
+      {:account/active? {:before true, :after false}}}
 
-  Unwrapping means no need for any lookup tables, can just generate :tempids map for return.
-  Theoretically at return time just go through the delta grab all ids that are Fulcro tempids.
-  Then generate a table using tempid->uuid.
-  However tempid handling already being done outside this function, so just returning {}.
-  For writing to our store we can just unwrap tempids, seen here in postwalk"
-  [{::kv-key-store/keys [store options]} env delta]
-  [::key-value/key-store map? map? => map?]
-  (let [dont-store-nils? (:key-value/dont-store-nils? options)
-        pairs-of-ident-map (->> delta
-                                (map (fn [[[table id] m]]
-                                       (when (string? id)
-                                         (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
-                                       (let [handle-before-after (if dont-store-nils?
-                                                                   (expand-to-after-no-nils-hof (tempid/tempid? id))
-                                                                   expand-to-after)]
-                                         [[table id] (-> m
-                                                         handle-before-after
-                                                         (assoc table id))])))
-                                (walk/postwalk
-                                  (fn [x] (if (tempid/tempid? x)
-                                            (:id x)
-                                            x)))
-                                (into {}))
-        pairs (cond
-                ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
-                (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
-    (go (<! (kv-konserve/merge-entities store pairs))))
-  ;; :tempids handled by caller
-  {})
+   Unwrapping means no need for any lookup tables, can just generate :tempids map for return.
+   Theoretically at return time just go through the delta grab all ids that are Fulcro tempids.
+   Then generate a table using tempid->uuid.
+   However tempid handling already being done outside this function, so just returning {}.
+   For writing to our store we can just unwrap tempids, seen here in postwalk"
+         [{::kv-key-store/keys [store options]} env delta]
+   [::key-value/key-store map? map? => map?]
+         (let [dont-store-nils? (:key-value/dont-store-nils? options)
+               pairs-of-ident-map (->> delta
+                                       (map (fn [[[table id] m]]
+                                              (when (string? id)
+                                                (throw (ex-info "String id means need to support string tempids. (Only Fulcro tempids currently supported)" {:id id})))
+                                              (let [handle-before-after (if dont-store-nils?
+                                                                          (expand-to-after-no-nils-hof (tempid/tempid? id))
+                                                                          expand-to-after)]
+                                                [[table id] (-> m
+                                                                handle-before-after
+                                                                (assoc table id))])))
+                                       (walk/postwalk
+                                         (fn [x] (if (tempid/tempid? x)
+                                                   (:id x)
+                                                   x)))
+                                       (into {}))
+               pairs (cond
+                       ((every-pred seq (complement map?)) pairs-of-ident-map) pairs-of-ident-map
+                       (map? pairs-of-ident-map) (into [] pairs-of-ident-map))]
+           #?(:clj  (<!! (kv-konserve/merge-entities store pairs))
+              :cljs (go (<! (kv-konserve/merge-entities store pairs))))
+           )
+   ;; :tempids handled by caller
+   {})
 
 (>defn import
   "Remove the row data for given tables, then write new entities. Usually the new entities are for corresponding tables,

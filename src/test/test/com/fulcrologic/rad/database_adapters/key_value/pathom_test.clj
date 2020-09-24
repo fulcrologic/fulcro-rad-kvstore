@@ -14,10 +14,15 @@
             [com.example.components.config :as config]
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
-            [konserve.core :as k]))
+            [konserve.core :as k]
+            [mount.core :as mount]))
+
+(defn config []
+  (mount/start)
+  config/config)
 
 (deftest alter-existing
-  (let [key-store (key-value/start config/config)
+  (let [key-store (key-value/start (config))
         address (seed/new-address (new-uuid 1) "111 Main St.")
         erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
                                 :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
@@ -59,7 +64,7 @@
         user-tempid (tempid/tempid user-uuid)
         address-uuid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
         address-tempid (tempid/tempid address-uuid)
-        key-store (key-value/start config/config)
+        key-store (key-value/start (config))
         email "chris@somemail.com.au"
         delta (new-user-delta user-tempid address-tempid email)
         key->attribute (attr/attribute-map all-attributes)
@@ -90,6 +95,6 @@
 (defn x-1
   "Hmm - memory key-store not very helpful here, as no automatic seeding when call directly like this"
   []
-  (let [key-store (key-value/start config/config)
+  (let [key-store (key-value/start (config))
         {::kv-key-store/keys [store]} key-store]
     (<!! (k/get-in store [:address/id]))))

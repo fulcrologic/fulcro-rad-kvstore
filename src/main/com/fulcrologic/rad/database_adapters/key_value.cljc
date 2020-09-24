@@ -144,7 +144,9 @@
          :or             {dont-store-nils? false}
          :as             main-database} (:main databases)]
     (when (nil? main-database)
-      (throw (ex-info "Need to have a database called :main" {:names (keys databases)})))
+      (throw (ex-info "Need to have a database called :main" {:names            (keys databases)
+                                                              :keys-from-config (and config (keys config))
+                                                              :config-nil?      (nil? config)})))
     (when (nil? kind)
       (throw (ex-info ":kind not found in :main database\n" {:database main-database})))
     main-database))

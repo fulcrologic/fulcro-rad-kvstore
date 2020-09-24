@@ -14,7 +14,8 @@
 (defn print-stack-trace [one two]
   (st/print-cause-trace one two))
 
-(set-refresh-dirs "src/dev" "src/main" "src/play" "src/demo-project" "src/test" "src/redis")
+;; If the :dev alias doesn't have "src/test" in CP then don't try to compile it here
+(set-refresh-dirs "src/dev" "src/main" "src/play" "src/demo-project" "src/redis" "src/test")
 
 (defn refresh [& args]
   (tools-ns/refresh))

@@ -1,5 +1,5 @@
 {:deps     {:aliases [:dev]}
- :nrepl    {:port 9000}
+ :nrepl    false
  :jvm-opts ["-Xmx2G"]
  :builds   {:main {:target     :browser
                    :output-dir "resources/public/js/main"

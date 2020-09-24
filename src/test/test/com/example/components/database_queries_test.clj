@@ -21,7 +21,7 @@
   (let [conn (:main kv-connections)]
     {::key-value/databases {:production (atom conn)}}))
 
-;; To prefer failures to errors when testing with kludge off
+;; To prefer failures to errors
 (defn my-rand-nth [xs]
   (if (empty? xs)
     nil
@@ -81,8 +81,7 @@
 
 ;; get-login-info
 (deftest get-known-account
-  (let [env (env)
-        {:account/keys [id name email] :as account} (queries/get-login-info env "sam@example.com")]
+  (let [{:account/keys [id name email] :as account} (queries/get-login-info (env) "sam@example.com")]
     (is (= id (new-uuid 101)))
     (is (= name "Sam"))
     (is (= email "sam@example.com"))

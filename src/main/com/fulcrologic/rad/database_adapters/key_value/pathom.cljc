@@ -16,7 +16,7 @@
     [clojure.spec.alpha :as s]
     [konserve.core :as k]
     #?(:clj [clojure.core.async :as async :refer [<!!]])
-    #?(:cljs [cljs.core.async :as async :refer [<!]])
+    #?(:cljs [cljs.core.async :as async :refer [<! go]])
     [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
     [taoensso.timbre :as log]))
 
@@ -148,6 +148,11 @@
    (env->key-store env :production ::key-value/databases)))
 
 (declare context)
+
+;;
+;; Surely save-form! is never going to be run in the browser? This function doesn't return a channel and we need to
+;; use <!! in order to actually write.
+;;
 (defn save-form!
   "Do all of the possible operations for the given form delta (save to the Key Value database involved)"
   [env {::form/keys [delta] :as save-params}]
@@ -188,7 +193,7 @@
                {::kv-key-store/keys [store]} (-> env ::key-value/connections (get schema))]
               (do
                 #?(:clj  (<!! (k/update store pk dissoc id))
-                   :cljs (<! (k/update store pk dissoc id)))
+                   :cljs (go (<! (k/update store pk dissoc id))))
                 {})
               (log/warn "Key Value adapter failed to delete " params)))
 

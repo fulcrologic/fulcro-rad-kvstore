@@ -77,13 +77,10 @@ To create a `::key-value/key-store` call `key-value/start` passing in the RAD co
 `::kv-key-store/store` inside the returned map is where the real Konserve
 adaptor is located. Unless the `:kind` of adaptor you are creating is `:memory`, `:filestore` or `:indexeddb`
 make sure you have required the namespace associated with the adaptor you are requesting, so that the defmethod of the
-`make-konserve-adaptor` multimethod can be found. As mentioned in a comment in the example `:require`, there is no
+`make-adaptor` multimethod can be found. As mentioned in a comment in the example `:require`, there is no
 need for an alias.
 
  {::kv-key-store/keys [store]} (key-value/start config/config)
-
-Note that `:indexeddb` will not yet be working at all. Getting this working in CLJS is planned for the next
-development iteration.
 
 == Functions
 

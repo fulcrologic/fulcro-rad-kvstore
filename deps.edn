@@ -5,7 +5,7 @@
            io.replikativ/konserve     {:mvn/version "0.5.1"}
            io.replikativ/hasch        {:mvn/version "0.3.7"}
            }
- :aliases {:dev        {:extra-paths ["src/dev" "src/demo-project" "src/play" "resources"
+ :aliases {:dev        {:extra-paths ["src/dev" "src/test" "src/demo-project" "src/play" "resources"
                                       "src/redis" "src/couchdb" "src/leveldb" "src/postgresql" "src/riak"]
                         :extra-deps  {org.clojure/tools.namespace            {:mvn/version "1.0.0"}
 
