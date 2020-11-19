@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.fulcrologic</groupId>
   <artifactId>fulcro-rad-kvstore</artifactId>
-  <version>1.0.0-RC2-SNAPSHOT</version>
+  <version>1.0.0-RC2</version>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -21,7 +21,7 @@
     <url>https://github.com/fulcrologic/fulcro-rad-kvstore</url>
     <connection>scm:git:git://github.com/fulcrologic/fulcro-rad-kvstore.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/fulcrologic/fulcro-rad-kvstore.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>fulcro-rad-kvstore-1.0.0-RC2</tag>
   </scm>
   <distributionManagement>
     <repository>
