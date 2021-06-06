@@ -16,8 +16,7 @@
     [com.fulcrologic.rad.routing.html5-history :as hist5 :refer [html5-history]]
     [com.fulcrologic.rad.routing.history :as history]
     [com.fulcrologic.rad.routing :as routing]
-    [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]
-    [com.example.ui.landing-page-2 :as landing-page]))
+    [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (defonce stats-accumulator
   (tufte/add-accumulating-handler! {:ns-pattern "*"}))
@@ -28,8 +27,8 @@
   (action [{:keys [app]}]
     (let [logged-in (auth/verified-authorities app)]
       (if (empty? logged-in)
-        (routing/route-to! app landing-page/LandingPage {})
-        (hist5/restore-route! app landing-page/LandingPage {})))))
+        (routing/route-to! app ui/LandingPage {})
+        (hist5/restore-route! app ui/LandingPage {})))))
 
 (defonce app (rad-app/fulcro-rad-app
                {:client-will-mount (fn [app]

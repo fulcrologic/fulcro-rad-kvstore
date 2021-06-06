@@ -12,3 +12,4 @@ resources/public/js
 /assert.txt
 /err.txt
 /projectFilesBackup/
+/yarn.lock

@@ -18,8 +18,7 @@
     [com.fulcrologic.rad.authorization :as auth]
     [com.fulcrologic.rad.form :as form]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [com.fulcrologic.rad.routing :as rroute]
-    [com.example.ui.landing-page-2 :as landing-page]))
+    [com.fulcrologic.rad.routing :as rroute]))
 
 (defsc LandingPage [this props]
   {:query         ['*]
@@ -31,7 +30,7 @@
 ;; This will just be a normal router...but there can be many of them.
 (defrouter MainRouter [this {:keys [current-state route-factory route-props]}]
   {:always-render-body? true
-   :router-targets      [landing-page/LandingPage ItemForm InvoiceForm InvoiceList AccountList AccountForm AccountInvoices
+   :router-targets      [LandingPage ItemForm InvoiceForm InvoiceList AccountList AccountForm AccountInvoices
                          sales-report/SalesReport InventoryReport
                          sales-report/RealSalesReport
                          dashboard/Dashboard]}
@@ -93,7 +92,7 @@
                     (div :.ui.item
                          (dom/button :.ui.button {:onClick (fn []
                                                              ;; TODO: check if we can change routes...
-                                                             (rroute/route-to! this landing-page/LandingPage {})
+                                                             (rroute/route-to! this LandingPage {})
                                                              (auth/logout! this :local))}
                                      "Logout")))
                   (div :.ui.item

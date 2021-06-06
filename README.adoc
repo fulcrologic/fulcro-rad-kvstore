@@ -25,14 +25,14 @@ this project's source code makes up the first three steps here:
 Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database has
 `:key-value/kind` of `:memory` or `:filestore`. We don't want to have to install Redis just yet.
 
-In a terminal type `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the installation. For the
-server side setup a REPL choosing 'Run with Deps' with the alias `dev`. Optionally set 'JVM Args'
-to `-Dguardrails.enabled=true`. Bring the REPL up. `(user/refresh)` will reload the namespaces (compilation step)
-and `(user/restart)` will get the Demo's dependency graph of Mount components up and running, which includes seeding
-the database.
+In a terminal type `yarn` then `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the
+installation. For the server side setup a local REPL choosing 'Run with Deps' with the alias `dev`. Bring the REPL up.
+`(user/refresh)` will reload the namespaces (compilation step) and `(user/restart)` will get the Demo's dependency
+graph of Mount components up and running, which includes seeding the database.
 
 Back to the client. Bring up a browser tab at http://localhost:9630/ and start a watch on the `:main` build. When
 compilation is complete refresh the browser at http://localhost:3000/. The Demo Application should now be working.
+Press the "Login" button in the top right corner and
 
 == Conventions
 

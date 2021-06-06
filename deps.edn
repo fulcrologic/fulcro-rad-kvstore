@@ -1,7 +1,7 @@
 {:paths   ["src/main"]
  :deps    {org.clojure/clojure        {:mvn/version "1.10.1" :scope "provided"}
-           ;com.fulcrologic/fulcro-rad {:mvn/version "1.0.4" :scope "provided"}
-           com.fulcrologic/fulcro-rad {:local/root "/home/chris/IdeaProjects/fulcro-rad"}
+           com.fulcrologic/fulcro-rad {:mvn/version "1.0.10" :scope "provided"}
+           ;com.fulcrologic/fulcro-rad {:local/root "/home/chris/IdeaProjects/fulcro-rad"}
            io.replikativ/konserve     {:mvn/version "0.5.1"}
            io.replikativ/hasch        {:mvn/version "0.3.7"}
            }
@@ -21,8 +21,8 @@
                                       com.taoensso/tufte                     {:mvn/version "2.1.0"}
 
                                       ;; Server
-                                      mount                                  {:mvn/version "0.1.12"}
-                                      hiccup                                 {:mvn/version "1.0.5"}
+                                      mount/mount                            {:mvn/version "0.1.12"}
+                                      hiccup/hiccup                          {:mvn/version "1.0.5"}
                                       ring/ring-defaults                     {:mvn/version "0.3.2"}
                                       ring/ring-core                         {:mvn/version "1.8.1"}
                                       org.immutant/web                       {:mvn/version "2.1.10"
