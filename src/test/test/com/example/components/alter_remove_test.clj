@@ -9,12 +9,13 @@
             [com.fulcrologic.rad.ids :refer [new-uuid]]
             [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
             [konserve.core :as k]
-            [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]))
+            [com.fulcrologic.rad.database-adapters.strict-entity :as strict-entity]
+            [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]))
 
 (defn env-key-store []
   (mount/start)
   (let [key-store (:main kv-connections)]
-    [{::key-value/databases {:production (atom key-store)}} key-store]))
+    [{kvo/databases {:production (atom key-store)}} key-store]))
 
 (defn my-rand-nth
   "Helps tests to fail rather than error"
@@ -44,7 +45,7 @@
     (<!! (k/update store table dissoc id))
     (let [accounts-2 (table->rows :account/id)
           num-2 (count accounts-2)]
-      (is (= (- num-1 1) num-2))
+      (is (= (dec num-1) num-2))
       (kv-write/import key-store (all-tables!) (all-entities!)))))
 
 (deftest remove-all

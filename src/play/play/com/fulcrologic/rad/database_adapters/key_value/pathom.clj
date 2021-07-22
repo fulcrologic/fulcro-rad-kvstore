@@ -14,25 +14,26 @@
     [com.example.components.config :as config]
     [clojure.core.async :as async :refer [<!! go]]
     [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
-    [mount.core :as mount]))
+    [mount.core :as mount]
+    [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]))
 
 (defn env-key-store []
   (mount/start)
   (let [key-store (:main kv-connections)]
-    [{::key-value/databases {:production (atom key-store)}} key-store]))
+    [{kvo/databases {:production (atom key-store)}} key-store]))
 
 (defn x-1 []
-  (let [retire-erick {[:account/id (new-uuid 100)]
-                      {:account/active? {:before true, :after false}}}
+  (let [retire-erick   {[:account/id (new-uuid 100)]
+                        {:account/active? {:before true, :after false}}}
         key->attribute (attr/attribute-map all-attributes)
-        env {::attr/key->attribute key->attribute}
-        schemas (kv-pathom/schemas-for-delta env retire-erick)]
+        env            {::attr/key->attribute key->attribute}
+        schemas        (kv-pathom/schemas-for-delta env retire-erick)]
     (assert (seq schemas) "No schemas")
     schemas))
 
 (defn x-2 []
   (let [[env {:keys [ids->entities]}] (env-key-store)
-        ids [(new-uuid 1) #_(new-uuid 300)]
+        ids      [(new-uuid 1) #_(new-uuid 300)]
         entities (ids->entities :address/id ids)]
     (dev/pp entities)))
 
@@ -42,22 +43,22 @@
 
 (defn alter-existing-user []
   (let [key-store (key-value/start config/config)
-        address (seed/new-address (new-uuid 1) "111 Main St.")
-        erick (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
-                                :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
-                                :account/primary-address (value-of (seed/new-address (new-uuid 300) "222 Other"))
-                                :time-zone/zone-id :time-zone.zone-id/America-Los_Angeles)]
+        address   (seed/new-address (new-uuid 1) "111 Main St.")
+        erick     (seed/new-account (new-uuid 100) "Erick" "erick@example.com" "letmein"
+                                    :account/addresses [(ident-of (seed/new-address (new-uuid 1) "111 Main St."))]
+                                    :account/primary-address (value-of (seed/new-address (new-uuid 300) "222 Other"))
+                                    :time-zone/zone-id :time-zone.zone-id/America-Los_Angeles)]
     (doseq [[table id value] [address erick]]
       (kv-write/write-tree key-store value))
-    (let [retire-erick {[:account/id (new-uuid 100)]
-                        {:account/active? {:before true, :after false}}}
+    (let [retire-erick   {[:account/id (new-uuid 100)]
+                          {:account/active? {:before true, :after false}}}
           key->attribute (attr/attribute-map all-attributes)
-          env {::attr/key->attribute   key->attribute
-               ::key-value/connections {:production key-store}}
-          params {::form/delta retire-erick}
-          tempids-map (kv-pathom/save-form! env params)
+          env            {::attr/key->attribute key->attribute
+                          kvo/connections       {:production key-store}}
+          params         {::form/delta retire-erick}
+          tempids-map    (kv-pathom/save-form! env params)
           {::kv-key-store/keys [ident->entity]} key-store
-          retired-erick (ident->entity [:account/id (new-uuid 100)])]
+          retired-erick  (ident->entity [:account/id (new-uuid 100)])]
       (dev/pp [tempids-map (:account/active? retired-erick)]))))
 
 (defn new-user-delta [user-tempid address-tempid]
@@ -77,15 +78,15 @@
     :address/zip    {:before nil, :after nil}}})
 
 (defn add-new-user []
-  (let [user-tempid (tempid/tempid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9")
+  (let [user-tempid    (tempid/tempid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9")
         address-tempid (tempid/tempid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16")
-        key-store (key-value/start config/config)
-        delta (new-user-delta user-tempid address-tempid)
+        key-store      (key-value/start config/config)
+        delta          (new-user-delta user-tempid address-tempid)
         key->attribute (attr/attribute-map all-attributes)
-        env {::attr/key->attribute   key->attribute
-             ::key-value/connections {:production key-store}}
-        params {::form/delta delta}
-        tempids-map (kv-pathom/save-form! env params)]
+        env            {::attr/key->attribute   key->attribute
+                        kvo/connections {:production key-store}}
+        params         {::form/delta delta}
+        tempids-map    (kv-pathom/save-form! env params)]
     (dev/pp tempids-map)))
 
 (defn start []

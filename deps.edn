@@ -51,7 +51,7 @@
            ;; in Clojure Deps Projects Aliases. Then 'marked as source' from in the IDE will 'hold' when you
            ;; 'Refresh Clojure Deps Projects'
            :tset       {:extra-paths ["src/test" "src/demo-project" "src/redis"]
-                        :extra-deps  {mount                          {:mvn/version "0.1.12"}
+                        :extra-deps  {mount/mount                    {:mvn/version "0.1.12"}
                                       cjmurphy/dev-lib               {:mvn/version "0.3.0"}
                                       ;; Change this to the adaptor you want to run the tests for (and for :extra-paths)
                                       io.replikativ/konserve-carmine {:mvn/version "0.1.3"}

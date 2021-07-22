@@ -1,5 +1,6 @@
 (ns com.example.ui
   (:require
+    [com.example.ui.landing-page :as lp]
     [com.fulcrologic.semantic-ui.modules.dropdown.ui-dropdown :refer [ui-dropdown]]
     [com.fulcrologic.semantic-ui.modules.dropdown.ui-dropdown-menu :refer [ui-dropdown-menu]]
     [com.fulcrologic.semantic-ui.modules.dropdown.ui-dropdown-item :refer [ui-dropdown-item]]
@@ -20,17 +21,10 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [com.fulcrologic.rad.routing :as rroute]))
 
-(defsc LandingPage [this props]
-  {:query         ['*]
-   :ident         (fn [] [:component/id ::LandingPage])
-   :initial-state {}
-   :route-segment ["landing-page"]}
-  (dom/div "Welcome to the Demo. Please log in."))
-
 ;; This will just be a normal router...but there can be many of them.
 (defrouter MainRouter [this {:keys [current-state route-factory route-props]}]
   {:always-render-body? true
-   :router-targets      [LandingPage ItemForm InvoiceForm InvoiceList AccountList AccountForm AccountInvoices
+   :router-targets      [lp/LandingPage ItemForm InvoiceForm InvoiceList AccountList AccountForm AccountInvoices
                          sales-report/SalesReport InventoryReport
                          sales-report/RealSalesReport
                          dashboard/Dashboard]}
@@ -92,7 +86,7 @@
                     (div :.ui.item
                          (dom/button :.ui.button {:onClick (fn []
                                                              ;; TODO: check if we can change routes...
-                                                             (rroute/route-to! this LandingPage {})
+                                                             (rroute/route-to! this lp/LandingPage {})
                                                              (auth/logout! this :local))}
                                      "Logout")))
                   (div :.ui.item

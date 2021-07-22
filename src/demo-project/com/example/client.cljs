@@ -1,5 +1,6 @@
 (ns com.example.client
   (:require
+    [com.example.ui.landing-page :as lp]
     [com.example.ui :as ui :refer [Root]]
     [com.example.ui.login-dialog :refer [LoginForm]]
     [com.fulcrologic.fulcro.application :as app]
@@ -27,8 +28,8 @@
   (action [{:keys [app]}]
     (let [logged-in (auth/verified-authorities app)]
       (if (empty? logged-in)
-        (routing/route-to! app ui/LandingPage {})
-        (hist5/restore-route! app ui/LandingPage {})))))
+        (routing/route-to! app lp/LandingPage {})
+        (hist5/restore-route! app lp/LandingPage {})))))
 
 (defonce app (rad-app/fulcro-rad-app
                {:client-will-mount (fn [app]

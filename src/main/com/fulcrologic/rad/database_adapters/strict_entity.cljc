@@ -46,7 +46,7 @@
      (if (nil? id-attribute)
        ;; We want to be /id by RAD config but have not yet done.
        (do
-         (log/error "Every value/map stored in the Key Value DB must have an /id attribute (current implementation limitation), else provide one to `::kv-write/entity->eql-result`")
+         (log/error "Every value/map stored in the Key Value DB must have an /id attribute (current implementation limitation), else provide one to `kv-write/entity->eql-result`")
          {})
        {id-attribute (get m id-attribute)})))
   ([m]

@@ -8,7 +8,8 @@
     [com.fulcrologic.rad.ids :refer [new-uuid]]
     [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
     [mount.core :as mount]
-    [au.com.seasoft.general.dev :as dev]))
+    [au.com.seasoft.general.dev :as dev]
+    [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]))
 
 (deftest always-passes
   (let [amount 1000]
@@ -19,13 +20,36 @@
   []
   (mount/start)
   (let [conn (:main kv-connections)]
-    {::key-value/databases {:production (atom conn)}}))
+    {kvo/databases {:production (atom conn)}}))
 
 ;; To prefer failures to errors
 (defn my-rand-nth [xs]
   (if (empty? xs)
     nil
     (rand-nth xs)))
+
+(comment
+  "Rubbish getting back from :indexeddb"
+  [{:account/id #incognito.base.IncognitoTaggedLiteral{:tag   incognito.base.IncognitoTaggedLiteral,
+                                                       :value {:tag   incognito.base.IncognitoTaggedLiteral,
+                                                               :value {:tag   incognito.base.IncognitoTaggedLiteral,
+                                                                       :value {:tag   uuid,
+                                                                               :value ffffffff-ffff-ffff-ffff-000000000100}}}}}
+   {:account/id #incognito.base.IncognitoTaggedLiteral{:tag   incognito.base.IncognitoTaggedLiteral,
+                                                       :value {:tag   incognito.base.IncognitoTaggedLiteral,
+                                                               :value {:tag   uuid,
+                                                                       :value ffffffff-ffff-ffff-ffff-000000000101}}}}
+   {:account/id #incognito.base.IncognitoTaggedLiteral{:tag   incognito.base.IncognitoTaggedLiteral,
+                                                       :value {:tag   uuid,
+                                                               :value ffffffff-ffff-ffff-ffff-000000000102}}}
+   {:account/id #incognito.base.IncognitoTaggedLiteral{:tag   uuid,
+                                                       :value ffffffff-ffff-ffff-ffff-000000000103}}]
+  "When s/simply be"
+  [#:account{:id #uuid "ffffffff-ffff-ffff-ffff-000000000100"}
+   #:account{:id #uuid "ffffffff-ffff-ffff-ffff-000000000101"}
+   #:account{:id #uuid "ffffffff-ffff-ffff-ffff-000000000102"}
+   #:account{:id #uuid "ffffffff-ffff-ffff-ffff-000000000103"}])
+
 
 ;;
 ;; range includes the first but not the last
@@ -36,7 +60,7 @@
                           (map new-uuid)
                           (map (fn [id] {:account/id id}))
                           set)
-        result-set (set (queries/get-all-accounts-2 (env) {:show-inactive? false}))]
+        result-set   (set (queries/get-all-accounts-2 (env) {:show-inactive? false}))]
     (is (= (set expected-set) result-set))
     ;(dev/pp result-set)
     ))
@@ -46,7 +70,7 @@
                           (map new-uuid)
                           (map (fn [id] {:item/id id}))
                           set)
-        result-set (set (queries/get-all-items (env) {:category/id (new-uuid 1000)}))]
+        result-set   (set (queries/get-all-items (env) {:category/id (new-uuid 1000)}))]
     (is (= expected-set result-set))
     ;(dev/pp result-set)
     ))
@@ -66,17 +90,17 @@
     ))
 
 (deftest customer-on-an-invoice
-  (let [env (env)
+  (let [env    (env)
         {::kv-key-store/keys [table->ident-rows]} (:main kv-connections)
         iident (my-rand-nth (table->ident-rows :invoice/id))
-        cid (queries/get-invoice-customer-id env (second iident))]
+        cid    (queries/get-invoice-customer-id env (second iident))]
     (is (uuid? cid))))
 
 (deftest category-of-a-line-item
-  (let [env (env)
+  (let [env      (env)
         {::kv-key-store/keys [table->ident-rows]} (:main kv-connections)
         li-ident (my-rand-nth (table->ident-rows :line-item/id))
-        cid (queries/get-line-item-category env (second li-ident))]
+        cid      (queries/get-line-item-category env (second li-ident))]
     (is (uuid? cid))))
 
 ;; get-login-info
@@ -93,7 +117,7 @@
 ;;
 (deftest all-categories
   (let [expected-set #{{:category/id (new-uuid 1000)} {:category/id (new-uuid 1002)} {:category/id (new-uuid 1003)}}
-        result-set (set (queries/get-all-categories (env) {}))]
+        result-set   (set (queries/get-all-categories (env) {}))]
     (is (= (set expected-set) result-set))
     ;(dev/pp result-set)
     ))

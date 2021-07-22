@@ -6,9 +6,9 @@
   was not supported. Of course there's no hard dependency on Konserve.
 
   Base data is always stored with key being an
-  `eql/ident` and the value a map of attributes, where the attribute values are either scalars or references. A
+  `eql/ident?` and the value a map of attributes, where the attribute values are either scalars or references. A
   reference can be either an ident or a vector of idents. If the data you want to store is not already strictly
-  normalised in this way then see the function `::kv-write/write-tree`.
+  normalised in this way then see the function `kv-write/write-tree`.
 
   Creation example:
 

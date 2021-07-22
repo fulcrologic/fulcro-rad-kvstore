@@ -15,7 +15,8 @@
             [com.fulcrologic.fulcro.algorithms.tempid :as tempid]
             [clojure.core.async :as async :refer [<!! <! chan go go-loop]]
             [konserve.core :as k]
-            [mount.core :as mount]))
+            [mount.core :as mount]
+            [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]))
 
 (defn config []
   (mount/start)
@@ -34,7 +35,7 @@
                         {:account/active? {:before true, :after false}}}
           key->attribute (attr/attribute-map all-attributes)
           env {::attr/key->attribute   key->attribute
-               ::key-value/connections {:production key-store}}
+               kvo/connections {:production key-store}}
           params {::form/delta retire-erick}
           tempids-map (kv-pathom/save-form! env params)
           {::kv-key-store/keys [ident->entity]} key-store
@@ -60,26 +61,26 @@
     :address/zip    {:before nil, :after nil}}})
 
 (deftest add-new-user
-  (let [user-uuid #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9"
-        user-tempid (tempid/tempid user-uuid)
-        address-uuid #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
-        address-tempid (tempid/tempid address-uuid)
-        key-store (key-value/start (config))
-        email "chris@somemail.com.au"
-        delta (new-user-delta user-tempid address-tempid email)
-        key->attribute (attr/attribute-map all-attributes)
-        env {::attr/key->attribute   key->attribute
-             ::key-value/connections {:production key-store}}
+  (let [user-uuid          #uuid "ab067a98-ff75-4ea6-ab45-f3c72070a2a9"
+        user-tempid        (tempid/tempid user-uuid)
+        address-uuid       #uuid "bf7cc6bb-bfdf-44e7-8deb-992224ab8b16"
+        address-tempid     (tempid/tempid address-uuid)
+        key-store          (key-value/start (config))
+        email              "chris@somemail.com.au"
+        delta              (new-user-delta user-tempid address-tempid email)
+        key->attribute     (attr/attribute-map all-attributes)
+        env                {::attr/key->attribute key->attribute
+                            kvo/connections       {:production key-store}}
         ;;
         ;; Hmm - not ideal. Needed because Redis is a real database. We need to implement what the Datomic Adaptor
         ;; has: pristine-db-connection / empty-db-connection (same thing as we no schema). So far I've always been
         ;; going with the one database, and doubt Redis supports just creating databases out of thin air
         ;; the way Datomic does...
         ;;
-        _ (kv-write/import key-store (all-tables!))
-        tempids-map (kv-pathom/save-form! env {::form/delta delta})
-        tempids (:tempids tempids-map)
-        user-in-tempids (get tempids user-tempid)
+        _                  (kv-write/import key-store (all-tables!))
+        tempids-map        (kv-pathom/save-form! env {::form/delta delta})
+        tempids            (:tempids tempids-map)
+        user-in-tempids    (get tempids user-tempid)
         address-in-tempids (get tempids address-tempid)
         {::kv-key-store/keys [ident->entity table->ident-rows]} key-store]
     (is user-in-tempids)

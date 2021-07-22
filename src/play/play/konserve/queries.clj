@@ -6,12 +6,13 @@
     [mount.core :as mount]
     [com.fulcrologic.rad.database-adapters.key-value :as key-value]
     [com.fulcrologic.rad.ids :refer [new-uuid]]
-    [au.com.seasoft.general.dev :as dev]))
+    [au.com.seasoft.general.dev :as dev]
+    [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]))
 
 (defn env []
   (mount/start)
   (let [conn (:main kv-connections)]
-    {::key-value/databases {:production (atom conn)}}))
+    {kvo/databases {:production (atom conn)}}))
 
 (defn x-1 []
   (dev/pp (queries/get-all-accounts-2 (env) {})))

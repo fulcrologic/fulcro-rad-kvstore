@@ -22,8 +22,8 @@ this project's source code makes up the first three steps here:
 
 `::kv-key-store/store` is the binding for the adaptor supplied by another library.
 
-Take a look inside `/src/demo-project/config/defaults.edn` just to check that the `:main` Key Value database has
-`:key-value/kind` of `:memory` or `:filestore`. We don't want to have to install Redis just yet.
+Take a look inside `shadow-cljs.edn` at `[:builds :main :devtools :preloads]`. Your Fulcro Inspect setup may be
+different to mine. Just reverse the commented-out lines if that's the case.
 
 In a terminal type `yarn` then `make cljs`. Shadow CLJS should lead you through the browser/CLJS part of the
 installation. For the server side setup a local REPL choosing 'Run with Deps' with the alias `dev`. Bring the REPL up.
@@ -44,6 +44,7 @@ The following namespace aliases are used in the content of this document:
   (:require
      [com.fulcrologic.rad.database-adapters.key-value :as key-value]
      [com.fulcrologic.rad.database-adapters.key-value.key-store :as kv-key-store]
+     [com.fulcrologic.rad.database-adapters.key-value-options :as kvo]
      [com.fulcrologic.rad.database-adapters.key-value.write :as kv-write]
      [com.fulcrologic.rad.database-adapters.key-value.pathom :as kv-pathom]
      ;; Don't need an alias to load a ns so the multimethod's defmethod can be found
@@ -167,8 +168,7 @@ There is no automatic schema generation. Unlike Datomic, Key Value databases do 
 
 This plugin currently eschews looking to RAD attributes to ascertain the primary key of entities, instead making
 the assumption that your entities are strict (according to the namespace `::strict-entity`). Thus if you do not need
-automatic Pathom resolver generation then this plugin can be used outside of RAD. Of course you can also always use
-Konserve directly!
+automatic Pathom resolver generation then this plugin can be used outside of RAD.
 
 The last significant thing this plugin lacks is the useful function
 `datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
@@ -204,7 +204,8 @@ whatever UIs TZ appears - in fo/attributes in AccountForm for example (`timezone
 There will be a base Maven artifact and one for each substantial adaptor. Thus `:memory`, `:filestore` and
 `:indexeddb` will be covered by the base artifact.
 
-Please see the Makefile to produce your own local jars.
+Please see the Makefile to produce your own local jars. But really all you need to do is implement the multimethod
+`key-value/make-adaptor`. Many `defmethod` examples in this source code.
 
 == Copyright and License
 
