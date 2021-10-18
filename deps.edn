@@ -28,8 +28,7 @@
                                       hiccup/hiccup                          {:mvn/version "1.0.5"}
                                       ring/ring-defaults                     {:mvn/version "0.3.2"}
                                       ring/ring-core                         {:mvn/version "1.8.1"}
-                                      org.immutant/web                       {:mvn/version "2.1.10"
-                                                                              :exclusions  [ch.qos.logback/logback-classic]}
+                                      http-kit/http-kit                      {:mvn/version "2.5.0"}
 
                                       ;; Unified logging for server
                                       com.taoensso/timbre                    {:mvn/version "4.10.0"}

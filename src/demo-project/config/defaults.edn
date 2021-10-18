@@ -1,8 +1,8 @@
-{:org.immutant.web/config           {:port 3000
-                                     :host "localhost"}
+{:org.httpkit.server/config         {:port 3000}
 
  :com.fulcrologic.rad.database-adapters.key-value/databases
- ;; The one that is :main will be picked up, the others ignored, but left here for reference.
+ ;; The one that is :main will be picked up, the others ignored, but left here for convenience if you want to switch
+ ;; to one of them.
                                     {:main      {:key-value/kind             :memory
                                                  :key-value/dont-store-nils? true
                                                  :key-value/schema           :production}
@@ -15,111 +15,6 @@
                                                  :key-value/schema           :production
                                                  :redis/uri                  "redis://127.0.0.1:6379/"}
                                      }
-
- :ring.middleware/defaults-config   {:params    {:keywordize true
-                                                 :multipart  true
-                                                 :nested     true
-                                                 :urlencoded true}
-                                     :cookies   true
-                                     :responses {:absolute-redirects     true
-                                                 :content-types          true
-                                                 :default-charset        "utf-8"
-                                                 :not-modified-responses true}
-                                     :session   true
-                                     :static    {:resources "public"}
-                                     :security  {:anti-forgery   false
-                                                 :hsts           true
-                                                 :ssl-redirect   false
-                                                 :frame-options  :sameorigin
-                                                 :xss-protection {:enable? true
-                                                                  :mode    :block}}}
-
- :com.fulcrologic.rad.pathom/config {:trace?         false
-                                     ;; TODO: Elide params and such in logging
-                                     :sensitive-keys #{:password :com.example.model.account/password}
-                                     :log-requests?  true
-                                     :log-responses? true}
-
- :taoensso.timbre/logging-config    {:level        :warn
-                                     :ns-whitelist []
-                                     :ns-blacklist ["com.mchange.v2.c3p0.impl.C3P0PooledConnectionPool"
-                                                    "com.mchange.v2.c3p0.stmt.GooGooStatementCache"
-                                                    "com.mchange.v2.resourcepool.BasicResourcePool"
-                                                    "com.zaxxer.hikari.pool.HikariPool"
-                                                    "com.zaxxer.*"
-                                                    "com.mchange.v2.c3p0.impl.AbstractPoolBackedDataSource"
-                                                    "com.mchange.v2.c3p0.impl.NewPooledConnection"
-                                                    "datomic.common"
-                                                    "datomic.connector"
-                                                    "datomic.coordination"
-                                                    "datomic.db"
-                                                    "datomic.index"
-                                                    "datomic.kv-cluster"
-                                                    "datomic.log"
-                                                    "datomic.peer"
-                                                    "datomic.process-monitor"
-                                                    "datomic.reconnector2"
-                                                    "datomic.slf4j"
-                                                    "org.flywaydb.*"
-                                                    "io.netty.buffer.PoolThreadCache"
-                                                    "org.apache.http.impl.conn.PoolingHttpClientConnectionManager"
-                                                    "org.projectodd.wunderboss.web.Web"
-                                                    "org.quartz.core.JobRunShell"
-                                                    "org.quartz.core.QuartzScheduler"
-                                                    "org.quartz.core.QuartzSchedulerThread"
-                                                    "org.quartz.impl.StdSchedulerFactory"
-                                                    "org.quartz.impl.jdbcjobstore.JobStoreTX"
-                                                    "org.quartz.impl.jdbcjobstore.SimpleSemaphore"
-                                                    "org.quartz.impl.jdbcjobstore.StdRowLockSemaphore"
-                                                    "org.quartz.plugins.history.LoggingJobHistoryPlugin"
-                                                    "org.quartz.plugins.history.LoggingTriggerHistoryPlugin"
-                                                    "org.quartz.utils.UpdateChecker"
-                                                    "shadow.cljs.devtools.server.worker.impl"]}}
-#_{:org.httpkit.server/config         {:port 3000 }
-
- :com.fulcrologic.rad.database-adapters.datomic/databases
-                                    {:main {:datomic/schema           :production
-                                            :datomic/driver           :mem
-                                            :datomic/database         "example"
-                                            :datomic/prevent-changes? true}}
-
- :roterski.fulcro.rad.database-adapters.crux/databases
-                                    {:main {
-                                            ;; leave empty for in-memory crux
-                                            ;; or uncomment a map below for postgres-based crux but first you need to manually create the fulcro-rad-demo db in postgres
-                                            ;; this map is passed through symbolize-crux-modules (so you can store :crux/module values as strings)
-                                            ;; and then passed directly into crux.api/start-node
-                                            ;; for all available options see https://opencrux.com/reference/21.02-1.15.0/configuration.html
-                                            ;;
-                                            ;;  :crux.jdbc/connection-pool {:dialect #:crux{:module "crux.jdbc.psql/->dialect"}
-                                            ;;                              :db-spec {:dbname   "fulcro-rad-demo"
-                                            ;;                                        :user     "postgres"
-                                            ;;                                        :password "postgres"}}
-                                            ;;  :crux/tx-log               {:crux/module "crux.jdbc/->tx-log"
-                                            ;;                              :connection-pool :crux.jdbc/connection-pool}
-                                            ;;  :crux/document-store       {:crux/module "crux.jdbc/->document-store"
-                                            ;;                              :connection-pool :crux.jdbc/connection-pool}
-                                            }}
- :com.fulcrologic.rad.database-adapters.sql/databases
- ;; Sample for PostgreSQL
- #_{:main {:flyway/migrate?          false
-           :flyway/migrations        ["classpath:config/sql_migrations"]
-           :hikaricp/config          {"dataSourceClassName"     "org.postgresql.ds.PGSimpleDataSource"
-                                      "dataSource.serverName"   "localhost"
-                                      "dataSource.user"         "postgres"
-                                      "dataSource.databaseName" "demo"}
-           :sql/vendor               :postgresql
-           :sql/auto-create-missing? true
-           :sql/schema               :production}}
-                                    {:main {:flyway/migrate?          false
-                                            :flyway/migrations        ["classpath:config/sql_migrations"]
-                                            :hikaricp/config          {"dataSourceClassName" "org.h2.jdbcx.JdbcDataSource"
-                                                                       "dataSource.user"     "sa"
-                                                                       "dataSource.password" "sa"
-                                                                       "dataSource.URL"      "jdbc:h2:mem:dev-db"}
-                                            :sql/vendor               :h2
-                                            :sql/auto-create-missing? true
-                                            :sql/schema               :production}}
 
  :ring.middleware/defaults-config   {:params    {:keywordize true
                                                  :multipart  true
