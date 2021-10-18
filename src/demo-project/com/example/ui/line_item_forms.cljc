@@ -20,8 +20,6 @@
 
 (form/defsc-form LineItemForm [this props]
   {fo/id            line-item/id
-   ::form/confirm (fn [message]
-                    #?(:cljs (js/confirm message)))
    fo/attributes    [line-item/category line-item/item line-item/quantity line-item/quoted-price line-item/subtotal]
    fo/validator     model/all-attribute-validator
    fo/route-prefix  "line-item"

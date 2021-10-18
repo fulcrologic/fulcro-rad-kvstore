@@ -1,7 +1,8 @@
 (ns com.example.ui.landing-page
   (:require
     [com.fulcrologic.fulcro.components :as comp :refer [defsc]]
-    [com.fulcrologic.fulcro.dom :as dom :refer [div label input]]))
+    #?(:clj  [com.fulcrologic.fulcro.dom-server :as dom :refer [div label input]]
+       :cljs [com.fulcrologic.fulcro.dom :as dom :refer [div label input]])))
 
 (defsc LandingPage [this props]
   {:query         ['*]

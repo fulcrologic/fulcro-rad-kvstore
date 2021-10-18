@@ -6,8 +6,6 @@
 
 (form/defsc-form FileForm [this props]
   {fo/id            m.file/id
-   ::form/confirm (fn [message]
-                    #?(:cljs (js/confirm message)))
    fo/layout-styles {:form-container :file-as-icon}
    fo/attributes    [m.file/uploaded-on
                      m.file/sha

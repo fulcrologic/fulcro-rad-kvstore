@@ -168,11 +168,11 @@ There is no automatic schema generation. Unlike Datomic, Key Value databases do 
 
 This plugin currently eschews looking to RAD attributes to ascertain the primary key of entities, instead making
 the assumption that your entities are strict (according to the namespace `::strict-entity`). Thus if you do not need
-automatic Pathom resolver generation then this plugin can be used outside of RAD.
+automatic Pathom resolver generation then this plugin can be used outside of RAD (it is then not actually a plugin).
 
-The last significant thing this plugin lacks is the useful function
+The last thing this plugin lacks is the function
 `datomic/empty-db-connection` that gives a data-less database - good for making tests that build up
-just the data they need, not touching existing databases. The closest we have is
+just the data they need, not touching existing databases. The closest equivalent we have is
 `kv-key-store/import` which requires an existing database and can be used to destroy the existing data (so not
 actually importing anything).
 
@@ -187,7 +187,12 @@ This section more for maintainers, just outlining steps to be taken when copying
 
 Apart from `com.example.components` and `config`, overwrite all with new files. So `com.example`: `client.cljs`,
 `model.cljc` and `ui.cljc`, then `com.example.model` and `com.example.ui`. The mount components should not change but
-you might want to check the `.edn` config files.
+you might want to check the `.edn` config files, as well as deps.edn for library version changes or replacements.
+
+Put back `com.example.ui.landing-page` and `com.example.ui.landing-page-2` if you overwrote the entire `com.example.ui`
+directory. Then alter the new version of `com.example.ui` requiring [com.example.ui.landing-page :as lp] and prefixing
+the LandingPage component with `lp`. Check the local LandingPage is the same and remove it. `com.example.client` will
+need a similar change to that of `com.example.ui` - require `lp` and reference it.
 
 The Demo project should now work; the following changes are optional.
 

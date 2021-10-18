@@ -4,6 +4,7 @@
     [com.example.ui :as ui :refer [Root]]
     [com.example.ui.login-dialog :refer [LoginForm]]
     [com.fulcrologic.fulcro.application :as app]
+    [com.fulcrologic.fulcro.components :as comp]
     [com.fulcrologic.fulcro.mutations :as m]
     [com.fulcrologic.rad.application :as rad-app]
     [com.fulcrologic.rad.report :as report]
@@ -31,28 +32,37 @@
         (routing/route-to! app lp/LandingPage {})
         (hist5/restore-route! app lp/LandingPage {})))))
 
-(defonce app (rad-app/fulcro-rad-app
-               {:client-will-mount (fn [app]
-                                     (log/merge-config! {:output-fn prefix-output-fn
-                                                         :appenders {:console (console-appender)}})
-                                     (dr/change-route! app ["landing-page"])
-                                     ;; a default tz until they log in
-                                     (datetime/set-timezone! "America/Los_Angeles")
-                                     (history/install-route-history! app (html5-history))
-                                     (rad-app/install-ui-controls! app sui/all-controls)
-                                     (report/install-formatter! app :boolean :affirmation (fn [_ value] (if value "yes" "no")))
-                                     (auth/start! app [LoginForm] {:after-session-check `fix-route}))}))
+(defn setup-RAD [app]
+  (rad-app/install-ui-controls! app sui/all-controls)
+  (report/install-formatter! app :boolean :affirmation (fn [_ value] (if value "yes" "no"))))
+
+(defonce app (rad-app/fulcro-rad-app {}))
 
 (defn refresh []
   ;; hot code reload of installed controls
   (log/info "Reinstalling controls")
-  (rad-app/install-ui-controls! app sui/all-controls)
-  (report/install-formatter! app :boolean :affirmation (fn [_ value] (if value "yes" "no")))
+  (setup-RAD app)
+  (comp/refresh-dynamic-queries! app)
   (app/mount! app Root "app"))
 
 (defn init []
+  (log/merge-config! {:output-fn prefix-output-fn
+                      :appenders {:console (console-appender)}})
   (log/info "Starting App")
-  (app/mount! app Root "app"))
+  ;; default time zone (should be changed at login for given user)
+  (datetime/set-timezone! "America/Los_Angeles")
+  ;; Avoid startup async timing issues by pre-initializing things before mount
+  (app/set-root! app Root {:initialize-state? true})
+  (dr/initialize! app)
+  (setup-RAD app)
+  (dr/change-route! app ["landing-page"])
+  (history/install-route-history! app (html5-history))
+  (auth/start! app [LoginForm] {:after-session-check `fix-route})
+  (app/mount! app Root "app" {:initialize-state? false}))
+
+(comment
+
+  )
 
 (defonce performance-stats (tufte/add-accumulating-handler! {}))
 

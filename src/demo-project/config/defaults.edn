@@ -75,3 +75,74 @@
                                                     "org.quartz.plugins.history.LoggingTriggerHistoryPlugin"
                                                     "org.quartz.utils.UpdateChecker"
                                                     "shadow.cljs.devtools.server.worker.impl"]}}
+#_{:org.httpkit.server/config         {:port 3000 }
+
+ :com.fulcrologic.rad.database-adapters.datomic/databases
+                                    {:main {:datomic/schema           :production
+                                            :datomic/driver           :mem
+                                            :datomic/database         "example"
+                                            :datomic/prevent-changes? true}}
+
+ :roterski.fulcro.rad.database-adapters.crux/databases
+                                    {:main {
+                                            ;; leave empty for in-memory crux
+                                            ;; or uncomment a map below for postgres-based crux but first you need to manually create the fulcro-rad-demo db in postgres
+                                            ;; this map is passed through symbolize-crux-modules (so you can store :crux/module values as strings)
+                                            ;; and then passed directly into crux.api/start-node
+                                            ;; for all available options see https://opencrux.com/reference/21.02-1.15.0/configuration.html
+                                            ;;
+                                            ;;  :crux.jdbc/connection-pool {:dialect #:crux{:module "crux.jdbc.psql/->dialect"}
+                                            ;;                              :db-spec {:dbname   "fulcro-rad-demo"
+                                            ;;                                        :user     "postgres"
+                                            ;;                                        :password "postgres"}}
+                                            ;;  :crux/tx-log               {:crux/module "crux.jdbc/->tx-log"
+                                            ;;                              :connection-pool :crux.jdbc/connection-pool}
+                                            ;;  :crux/document-store       {:crux/module "crux.jdbc/->document-store"
+                                            ;;                              :connection-pool :crux.jdbc/connection-pool}
+                                            }}
+ :com.fulcrologic.rad.database-adapters.sql/databases
+ ;; Sample for PostgreSQL
+ #_{:main {:flyway/migrate?          false
+           :flyway/migrations        ["classpath:config/sql_migrations"]
+           :hikaricp/config          {"dataSourceClassName"     "org.postgresql.ds.PGSimpleDataSource"
+                                      "dataSource.serverName"   "localhost"
+                                      "dataSource.user"         "postgres"
+                                      "dataSource.databaseName" "demo"}
+           :sql/vendor               :postgresql
+           :sql/auto-create-missing? true
+           :sql/schema               :production}}
+                                    {:main {:flyway/migrate?          false
+                                            :flyway/migrations        ["classpath:config/sql_migrations"]
+                                            :hikaricp/config          {"dataSourceClassName" "org.h2.jdbcx.JdbcDataSource"
+                                                                       "dataSource.user"     "sa"
+                                                                       "dataSource.password" "sa"
+                                                                       "dataSource.URL"      "jdbc:h2:mem:dev-db"}
+                                            :sql/vendor               :h2
+                                            :sql/auto-create-missing? true
+                                            :sql/schema               :production}}
+
+ :ring.middleware/defaults-config   {:params    {:keywordize true
+                                                 :multipart  true
+                                                 :nested     true
+                                                 :urlencoded true}
+                                     :cookies   true
+                                     :responses {:absolute-redirects     true
+                                                 :content-types          true
+                                                 :default-charset        "utf-8"
+                                                 :not-modified-responses true}
+                                     :session   true
+                                     :static    {:resources "public"}
+                                     :security  {:anti-forgery   false
+                                                 :hsts           true
+                                                 :ssl-redirect   false
+                                                 :frame-options  :sameorigin
+                                                 :xss-protection {:enable? true
+                                                                  :mode    :block}}}
+
+ :com.fulcrologic.rad.pathom/config {:trace?         false
+                                     ;; TODO: Elide params and such in logging
+                                     :sensitive-keys #{:password :com.example.model.account/password}
+                                     :log-requests?  true
+                                     :log-responses? true}
+
+ :taoensso.timbre/logging-config    {:min-level :info}}
