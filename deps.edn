@@ -1,10 +1,7 @@
 {:paths   ["src/main"]
  :deps    {org.clojure/clojure        {:mvn/version "1.11.0-alpha2" :scope "provided"}
-           ;; Trouble with:
-           ;; No such var: uism/transact
-           ;; , so presumably (latest stable) "1.0.27" is too old. Just wait for a newer version to be the stable one
-           ;com.fulcrologic/fulcro-rad {:mvn/version "1.0.27" :scope "provided"}
-           com.fulcrologic/fulcro-rad {:local/root "/home/chris/IdeaProjects/fulcro-rad"}
+           ;com.fulcrologic/fulcro-rad {:mvn/version "1.0.29-SNAPSHOT" :scope "provided"}
+           com.fulcrologic/fulcro-rad {:local/root "/home/chris/IdeaProjects/fulcro-rad" :scope "provided"}
            io.replikativ/konserve     {:mvn/version "0.5.1"}
            io.replikativ/hasch        {:mvn/version "0.3.7"}
            }

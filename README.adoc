@@ -190,19 +190,16 @@ Apart from `com.example.components` and `config`, overwrite all with new files. 
 you might want to check the `.edn` config files, as well as deps.edn for library version changes or replacements.
 
 Put back `com.example.ui.landing-page` and `com.example.ui.landing-page-2` if you overwrote the entire `com.example.ui`
-directory. Then alter the new version of `com.example.ui` requiring [com.example.ui.landing-page :as lp] and prefixing
+directory. Then alter the new version of `com.example.ui` requiring `[com.example.ui.landing-page :as lp]` and prefixing
 the LandingPage component with `lp`. Check the local LandingPage is the same and remove it. `com.example.client` will
 need a similar change to that of `com.example.ui` - require `lp` and reference it.
 
 The Demo project should now work; the following changes are optional.
 
-Additionally I've found I need to add this to every Form, regardless of the Database plugin:
-
- ::form/confirm (fn [message]
-                  #?(:cljs (js/confirm message)))
-
 `time-zone` is Datomic-specific so remove it by commenting out timezone/attributes from com.example.model and on
 whatever UIs TZ appears - in fo/attributes in AccountForm for example (`timezone/zone-id`).
+
+Ensure that `deps.edn`, `package.json` and `shadow-cljs.edn` are up to date.
 
 == Deployment
 

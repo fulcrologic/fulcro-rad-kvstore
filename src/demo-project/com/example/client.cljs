@@ -1,12 +1,14 @@
 (ns com.example.client
   (:require
     [com.example.ui.landing-page :as lp]
+    ["@js-joda/locale_en-us" :refer [Locale]]
     [com.example.ui :as ui :refer [Root]]
     [com.example.ui.login-dialog :refer [LoginForm]]
     [com.fulcrologic.fulcro.application :as app]
     [com.fulcrologic.fulcro.components :as comp]
     [com.fulcrologic.fulcro.mutations :as m]
     [com.fulcrologic.rad.application :as rad-app]
+    [com.fulcrologic.rad.locale :as r.locale]
     [com.fulcrologic.rad.report :as report]
     [com.fulcrologic.rad.authorization :as auth]
     [com.fulcrologic.rad.rendering.semantic-ui.semantic-ui-controls :as sui]
@@ -21,16 +23,16 @@
     [com.fulcrologic.fulcro.routing.dynamic-routing :as dr]))
 
 (defonce stats-accumulator
-  (tufte/add-accumulating-handler! {:ns-pattern "*"}))
+         (tufte/add-accumulating-handler! {:ns-pattern "*"}))
 
 (m/defmutation fix-route
   "Mutation. Called after auth startup. Looks at the session. If the user is not logged in, it triggers authentication"
   [_]
   (action [{:keys [app]}]
-    (let [logged-in (auth/verified-authorities app)]
-      (if (empty? logged-in)
-        (routing/route-to! app lp/LandingPage {})
-        (hist5/restore-route! app lp/LandingPage {})))))
+          (let [logged-in (auth/verified-authorities app)]
+            (if (empty? logged-in)
+              (routing/route-to! app lp/LandingPage {})
+              (hist5/restore-route! app lp/LandingPage {})))))
 
 (defn setup-RAD [app]
   (rad-app/install-ui-controls! app sui/all-controls)
@@ -46,6 +48,10 @@
   (app/mount! app Root "app"))
 
 (defn init []
+  ;; NOTE: IF you require other locales from js-joda, the right way to make a new one that isn't listed as a
+  ;; static member of the Locale class is to use (Locale. "lang" "country"). E.g. (Locale. "es" "MX"). This, of
+  ;; course, requires that you've also loaded the @js-joda/locale_es (or related) package.
+  (r.locale/set-locale! (.-US Locale))
   (log/merge-config! {:output-fn prefix-output-fn
                       :appenders {:console (console-appender)}})
   (log/info "Starting App")
