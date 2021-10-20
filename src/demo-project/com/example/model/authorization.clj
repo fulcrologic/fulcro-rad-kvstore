@@ -18,11 +18,13 @@
                current-hashed-value (attr/encrypt password salt iterations)]
     (if (= hashed-value current-hashed-value)
       (do
-        (log/info "Login for" username)
-        (let [s {::auth/provider    :local
+        ;; There's nothing 'datomic' about them
+        (let [zone-id-2 (timezone/datomic-time-zones zone-id)
+              s {::auth/provider    :local
                  ::auth/status      :success
-                 :time-zone/zone-id (-> zone-id :db/ident timezone/datomic-time-zones)
+                 :time-zone/zone-id zone-id-2
                  :account/name      name}]
+          (log/info "Login for" username name zone-id zone-id-2)
           (fmw/augment-response s (fn [resp]
                                     (let [current-session (-> env :ring/request :session)]
                                       (assoc resp :session (merge current-session s)))))))

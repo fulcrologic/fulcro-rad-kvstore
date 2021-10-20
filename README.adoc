@@ -197,7 +197,8 @@ need a similar change to that of `com.example.ui` - require `lp` and reference i
 The Demo project should now work; the following changes are optional.
 
 `time-zone` is Datomic-specific so remove it by commenting out timezone/attributes from com.example.model and on
-whatever UIs TZ appears - in fo/attributes in AccountForm for example (`timezone/zone-id`).
+whatever UIs TZ appears - in fo/attributes in AccountForm for example (`timezone/zone-id`). Remove the use of
+`:db/ident` in `com.example.model.authorization/login!` - it is Datomic specific and unnecessary.
 
 Ensure that `deps.edn`, `package.json` and `shadow-cljs.edn` are up to date.
 

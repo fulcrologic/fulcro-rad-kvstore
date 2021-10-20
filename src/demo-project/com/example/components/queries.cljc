@@ -78,5 +78,4 @@
     (let [account (->> (vals (<! (k/get-in store [:account/id])))
                        (filter #(= username (:account/email %)))
                        first)]
-      (log/warn "account (TZ is key and s/be string)" (:time-zone/zone-id account))
       account)))

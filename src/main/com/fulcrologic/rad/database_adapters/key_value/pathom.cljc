@@ -97,7 +97,7 @@
             :let [key-store (env->key-store env schema kvo/connections)
                   {:keys [tempid->string
                           tempid->generated-id]} (delta->tempid-maps env delta)]]
-      (log/debug "Saving form delta" (with-out-str (pprint delta)))
+      (log/debug "Saving form delta\n" (with-out-str (pprint delta)))
       (log/debug "on schema" schema)
       (if key-store
         (try
@@ -222,7 +222,7 @@
      ::pc/output  outputs
      ::pc/batch?  true
      ::pc/resolve (cond-> (fn [{::attr/keys [key->attribute] :as env} input]
-                            (log/debug "In resolver:" qualified-key "inputs:" input)
+                            (log/debug "In resolver:" qualified-key "inputs:" (vec input))
                             (let [key-store (env->key-store env schema kvo/databases)]
                               (->> (entity-query
                                      (assoc env ::key-value/id-attribute id-attribute)

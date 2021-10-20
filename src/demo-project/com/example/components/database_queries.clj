@@ -85,7 +85,7 @@
 ;;
 ;; Keeping to show that above we are not outputting the name of the time-zone
 ;; (rather the keyword)
-;; Not working code obviously!
+;; Not working code as has :db/ident in it which is Datomic specific!
 ;;
 (defn get-login-info-2
   "Get the account name, time zone, and password info via a username (email)."
