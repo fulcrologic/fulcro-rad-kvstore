@@ -11,6 +11,10 @@ image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-rad-kvstore.svg[li
 A Fulcro RAD plugin that provides an interface for building database adaptors to support databases that generally store
 things as documents with keys.
 
+WARNING: ALPHA SOFTWARE. This library is not yet heavily tested and there are reports that it does not yet work well as a
+Clojurescript-side adapter. Contributions are encouraged. Fulcrologic does not have the resources at present to maintain
+this particular plugin.
+
 == Trying it Out
 
 This Fulcro RAD plugin with adaptors is in development and is not yet ready for production.
