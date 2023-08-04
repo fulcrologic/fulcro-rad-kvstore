@@ -14,3 +14,4 @@ resources/public/js
 /projectFilesBackup/
 /yarn.lock
 /yarn-error.log
+.clj-kondo/.cache
